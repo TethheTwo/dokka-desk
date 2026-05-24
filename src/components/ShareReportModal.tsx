@@ -69,7 +69,7 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
     const node = captureRef.current;
     if (!node) throw new Error("no node");
     const canvas = await domToCanvas(node, {
-      scale: 2,
+      scale: 5,
       backgroundColor: "#ffffff",
       width: 900,
       height: 720 + FOOTER_H,
