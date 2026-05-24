@@ -1,0 +1,36 @@
+_format_version: "1.1"
+
+services:
+  - name: auth
+    url: http://auth:9999
+    routes:
+      - name: auth
+        paths:
+          - /auth/v1
+  - name: rest
+    url: http://rest:3000
+    routes:
+      - name: rest
+        paths:
+          - /rest/v1
+
+plugins:
+  - name: cors
+    config:
+      origins:
+        - http://localhost:3000
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      headers:
+        - Authorization
+        - Content-Type
+        - X-Client-Info
+        - apikey
+      exposed_headers:
+        - Content-Range
+      credentials: true
