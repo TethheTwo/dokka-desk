@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Copy, Mail, X, Check, ArrowLeft } from "lucide-react";
+import { domToCanvas } from "modern-screenshot";
 import { toast } from "sonner";
 import { useMasterList } from "@/lib/master-lists";
-import type { FormReportData } from "@/components/ReportPreviewModal";
+import { FormSheet, type FormReportData } from "@/components/ReportPreviewModal";
 import { formatCode } from "@/lib/utils";
-import { compileReportPNG } from "@/lib/latex/compile-latex";
 
 interface Props {
   open: boolean;
@@ -14,6 +14,7 @@ interface Props {
 }
 
 const CC_FIXED = "nacionalseguros@conecta.com.bo";
+const FOOTER_H = 40;
 
 function fmtTime(iso?: string | null) {
   if (!iso) return "";
@@ -24,42 +25,12 @@ function fmtTime(iso?: string | null) {
   return `${hh}:${mm}`;
 }
 
-function buildFormFields(data: FormReportData, variant: "ap" | "cg", footer: string) {
-  return {
-    FECHA_SOLICITUD: data.fecha_solicitud ? fmtDate(data.fecha_solicitud) : "—",
-    FECHA_SINIESTRO: data.fecha_siniestro ? fmtDate(data.fecha_siniestro) : "—",
-    ACCIDENTADO: variant === "ap" ? data.nombre_accidentado : null,
-    CARNET: variant === "ap" ? data.carnet_accidentado : null,
-    ASEGURADO: variant === "cg" ? data.asegurado : null,
-    DANOS: variant === "cg" ? data.danos_personales : null,
-    SOLICITANTE: data.solicitante,
-    CELULAR: data.celular,
-    DEPARTAMENTO: data.departamento,
-    POLIZA: data.poliza,
-    DIRECCION: data.direccion,
-    DESCRIPCION: data.descripcion,
-    EJECUTIVO: data.ejecutivo_nombre,
-    EJ_CEL: data.ejecutivo_celular,
-    INTENTOS: data.intentos_llamada,
-    OBS: data.observaciones,
-    TRI: data.hubo_tripartita,
-    HORA: data.hora_contacto,
-    FOOTER: footer,
-  };
-}
-
-function fmtDate(s?: string | null) {
-  if (!s) return "—";
-  const d = new Date(s);
-  if (isNaN(d.getTime())) return s;
-  return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
-}
-
 export function ShareReportModal({ open, onClose, variant, data }: Props) {
   const correos = useMasterList("correos");
   const [copied, setCopied] = useState(false);
   const [emailPicker, setEmailPicker] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const captureRef = useRef<HTMLDivElement>(null);
 
   const code = formatCode(variant === "ap" ? "AP" : "CG", (data as any).nro);
 
@@ -95,18 +66,17 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
   };
 
   const captureReport = async (): Promise<Blob> => {
-    const footer = `Reporte ${code}${ejecutivo ? " · " + ejecutivo : ""} · ${link}`;
-    const r = await compileReportPNG({
-      data: {
-        variant,
-        nro: data.nro,
-        title: "",
-        subtitle: "",
-        fields: buildFormFields(data, variant, footer),
-      },
+    const node = captureRef.current;
+    if (!node) throw new Error("no node");
+    const canvas = await domToCanvas(node, {
+      scale: 2,
+      backgroundColor: "#ffffff",
+      width: 900,
+      height: 720 + FOOTER_H,
     });
-    const bytes = Uint8Array.from(atob(r.png), (c) => c.charCodeAt(0));
-    return new Blob([bytes], { type: "image/png" });
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("no blob"))), "image/png");
+    });
   };
 
   const shareWhatsApp = async () => {
@@ -234,7 +204,7 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
           ].join("");
 
     const bodyHTML = `
-<div style="font-family:Calibri,Arial,sans-serif;color:#0f172a;max-width:680px;">
+<div style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;max-width:680px;">
   <p style="margin:0 0 4px;font-size:14px;"><strong>Estimados:</strong></p>
   <p style="margin:0 0 12px;font-size:13px;">Saludos cordiales.</p>
   <p style="margin:0 0 12px;font-size:13px;line-height:1.5;">${introTxt}</p>
@@ -293,6 +263,54 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
         if (e.target === e.currentTarget) onClose();
       }}
     >
+      {/* Hidden capture target */}
+      <div
+        ref={captureRef}
+        aria-hidden
+        style={{
+          position: "fixed",
+          left: "-10000px",
+          top: 0,
+          width: 900,
+          height: 720 + FOOTER_H,
+          background: "#fff",
+        }}
+      >
+        <div style={{ width: 900, height: 720 }}>
+          <FormSheet variant={variant} data={data} />
+        </div>
+        <div
+          style={{
+            width: 900,
+            height: FOOTER_H,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderTop: "1px solid #cbd5e1",
+            padding: "0 16px",
+            fontSize: 11,
+            color: "#64748b",
+            fontFamily: "Arial, sans-serif",
+            boxSizing: "border-box",
+          }}
+        >
+          <span>Reporte {code}</span>
+          {ejecutivo && <span>{ejecutivo}</span>}
+          <span
+            style={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              maxWidth: 300,
+              direction: "rtl",
+              textAlign: "right",
+            }}
+          >
+            {link}
+          </span>
+        </div>
+      </div>
+
       <div
         className="bg-background rounded-2xl shadow-2xl border border-border w-full max-w-md animate-in zoom-in-95 fade-in-0 duration-200"
         onMouseDown={(e) => e.stopPropagation()}

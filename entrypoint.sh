@@ -26,7 +26,4 @@ JSON
 )" > /dev/null && \
   echo "Admin user created" || echo "Admin seed skipped (may already exist)"
 
-# Update font cache for XeLaTeX / Liberation Sans
-fc-cache -f 2>/dev/null || true
-
 exec bun run server-entry.js
