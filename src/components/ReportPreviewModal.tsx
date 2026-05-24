@@ -151,7 +151,7 @@ export function ReportPreviewModal({
       setBusy("pdf");
       const c = await renderCanvas();
       const img = c.toDataURL("image/png");
-      const pdf = new jsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
+      const pdf = new jsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
       const margin = 20;
