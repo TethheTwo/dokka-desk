@@ -3,7 +3,6 @@ import { Camera, FileText, X, Image as ImageIcon } from "lucide-react";
 import { domToCanvas } from "modern-screenshot";
 import { toast } from "sonner";
 import { formatCode } from "@/lib/utils";
-import { downloadReportPDF } from "@/lib/report-pdf";
 
 export interface ReportField {
   label: string;
@@ -108,7 +107,7 @@ export function ReportPreviewModal({
       backgroundColor: "#ffffff",
       width: SHEET_W,
       height: SHEET_H,
-      scale: 4,
+      scale: 5,
     });
     node.style.transform = savedTransform;
     cachedCanvasRef.current = canvas;
@@ -151,27 +150,23 @@ export function ReportPreviewModal({
   const downloadPDF = async () => {
     try {
       setBusy("pdf");
-      if (variant && data) {
-        downloadReportPDF(variant, data);
-      } else {
-        const c = await renderCanvas();
-        const img = c.toDataURL("image/png");
-        const pdf = new (await import("jspdf")).jsPDF({
-          unit: "pt",
-          format: "a4",
-          orientation: "portrait",
-        });
-        const pageW = pdf.internal.pageSize.getWidth();
-        const pageH = pdf.internal.pageSize.getHeight();
-        const margin = 20;
-        const targetW = pageW - margin * 2;
-        const targetH = pageH - margin * 2;
-        const ratio = Math.min(targetW / c.width, targetH / c.height);
-        const w = c.width * ratio;
-        const h = c.height * ratio;
-        pdf.addImage(img, "PNG", (pageW - w) / 2, (pageH - h) / 2, w, h);
-        pdf.save(`${fileBase()}.pdf`);
-      }
+      const c = await renderCanvas();
+      const img = c.toDataURL("image/png");
+      const pdf = new (await import("jspdf")).jsPDF({
+        unit: "pt",
+        format: "a4",
+        orientation: "portrait",
+      });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const margin = 20;
+      const targetW = pageW - margin * 2;
+      const targetH = pageH - margin * 2;
+      const ratio = Math.min(targetW / c.width, targetH / c.height);
+      const w = c.width * ratio;
+      const h = c.height * ratio;
+      pdf.addImage(img, "PNG", (pageW - w) / 2, (pageH - h) / 2, w, h);
+      pdf.save(`${fileBase()}.pdf`);
       toast.success("PDF descargado");
     } catch (e) {
       console.error(e);
