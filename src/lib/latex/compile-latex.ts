@@ -252,12 +252,12 @@ async function compilePDF(data: { variant: string; nro: string | number; fields:
     const texFile = join(dir, "report.tex");
     writeFileSync(texFile, template, "utf-8");
 
-    execSync("pdflatex -interaction=nonstopmode -halt-on-error report.tex", {
+    execSync("xelatex -interaction=nonstopmode -halt-on-error report.tex", {
       cwd: dir, stdio: "pipe", timeout: 30000,
     });
 
     try {
-      execSync("pdflatex -interaction=nonstopmode -halt-on-error report.tex", {
+      execSync("xelatex -interaction=nonstopmode -halt-on-error report.tex", {
         cwd: dir, stdio: "pipe", timeout: 30000,
       });
     } catch {}
