@@ -48,14 +48,14 @@ POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 JWT_SECRET=$JWT_SECRET
 
 # Site URL
-SITE_URL=http://localhost:3000
+SITE_URL=http://localhost:8080
 
 # Supabase-compatible API keys (auto-generated)
 SUPABASE_PUBLISHABLE_KEY=$ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY=$SERVICE_KEY
 
 # Vite (frontend) configuration
-VITE_SUPABASE_URL=http://localhost:3000
+VITE_SUPABASE_URL=http://localhost:8080
 VITE_SUPABASE_PUBLISHABLE_KEY=$ANON_KEY
 
 # Admin credentials (auto-generated)

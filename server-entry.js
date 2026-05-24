@@ -23,6 +23,7 @@ function safeResolve(root, userPath) {
 
 serve({
   port: PORT,
+  hostname: "0.0.0.0",
   async fetch(request) {
     const url = new URL(request.url);
     const method = request.method;
@@ -231,4 +232,4 @@ async function handleSignedUrl(request, method, url) {
   });
 }
 
-console.log(`Server running at http://localhost:${PORT}`);
+console.log(`Server running on 0.0.0.0:${PORT}`);
