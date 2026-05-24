@@ -196,57 +196,47 @@ function getTemplate(variant: string): string {
 export const compileReportPDF = createServerFn({ method: "POST" })
   .inputValidator((input) => ReportInput.parse(input))
   .handler(async ({ data }) => {
-    const { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } = await import("node:fs");
-    const { execSync } = await import("node:child_process");
-    const { join } = await import("node:path");
-    const { tmpdir } = await import("node:os");
-
-    const { variant, fields } = data;
-    let template = getTemplate(variant);
-    template = replaceTex(template, fields);
-
-    const dir = mkdtempSync(join(tmpdir(), "latex-"));
     try {
-      const texFile = join(dir, "report.tex");
-      writeFileSync(texFile, template, "utf-8");
+      const { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } = await import("node:fs");
+      const { execSync } = await import("node:child_process");
+      const { join } = await import("node:path");
+      const { tmpdir } = await import("node:os");
 
-      execSync("pdflatex -interaction=nonstopmode -halt-on-error report.tex", {
-        cwd: dir,
-        stdio: "pipe",
-        timeout: 30000,
-      });
+      const { variant, fields } = data;
+      let template = getTemplate(variant);
+      template = replaceTex(template, fields);
 
-      // Run twice for cross-references
+      const dir = mkdtempSync(join(tmpdir(), "latex-"));
       try {
+        const texFile = join(dir, "report.tex");
+        writeFileSync(texFile, template, "utf-8");
+
         execSync("pdflatex -interaction=nonstopmode -halt-on-error report.tex", {
           cwd: dir,
           stdio: "pipe",
           timeout: 30000,
         });
-      } catch (e: unknown) {
-        const err = e as any;
-        const logPath = join(dir, "report.log");
-        let log = "";
-        try { log = readFileSync(logPath, "utf-8").slice(-2000); } catch {}
-        throw new Error(`LaTeX error: ${err.stderr?.toString()?.slice(0, 500) || err.message || "unknown"}\n${log.slice(0, 500)}`);
+
+        // Second run for cross-references
+        try {
+          execSync("pdflatex -interaction=nonstopmode -halt-on-error report.tex", {
+            cwd: dir,
+            stdio: "pipe",
+            timeout: 30000,
+          });
+        } catch {}
+
+        const pdfPath = join(dir, "report.pdf");
+        if (!existsSync(pdfPath)) throw new Error("PDF not generated");
+
+        const pdfBuffer = readFileSync(pdfPath);
+        return { pdf: pdfBuffer.toString("base64"), mime: "application/pdf" };
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
       }
-
-      // Run twice for cross-references
-      try {
-        execSync("pdflatex -interaction=nonstopmode -halt-on-error report.tex", {
-          cwd: dir,
-          stdio: "pipe",
-          timeout: 30000,
-        });
-      } catch {}
-
-      const pdfPath = join(dir, "report.pdf");
-      if (!existsSync(pdfPath)) throw new Error("PDF not generated");
-
-      const pdfBuffer = readFileSync(pdfPath);
-      return { pdf: pdfBuffer.toString("base64"), mime: "application/pdf" };
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(msg.slice(0, 500));
     }
   });
 
