@@ -252,7 +252,7 @@ async function compilePDF(data: { variant: string; nro: string | number; fields:
     const texFile = join(dir, "report.tex");
     writeFileSync(texFile, template, "utf-8");
 
-    execSync("xelatex -interaction=nonstopmode -halt-on-error report.tex", {
+    execSync("fc-cache 2>/dev/null; xelatex -interaction=nonstopmode -halt-on-error report.tex", {
       cwd: dir, stdio: "pipe", timeout: 30000,
     });
 
