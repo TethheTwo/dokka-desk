@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { Copy, Mail, X, Check, ArrowLeft } from "lucide-react";
-import html2canvas from "html2canvas";
+import { domToCanvas } from "modern-screenshot";
 import { toast } from "sonner";
 import { useMasterList } from "@/lib/master-lists";
 import { FormSheet, type FormReportData } from "@/components/ReportPreviewModal";
@@ -64,19 +64,14 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
     }
   };
 
-  // Captura el reporte como PNG usando html2canvas sobre un FormSheet renderizado oculto
   const captureReport = async (): Promise<Blob> => {
     const node = captureRef.current;
     if (!node) throw new Error("no node");
-    const canvas = await html2canvas(node, {
+    const canvas = await domToCanvas(node, {
       scale: 2,
       backgroundColor: "#ffffff",
-      useCORS: false,
-      logging: false,
       width: 900,
       height: 720,
-      windowWidth: 900,
-      windowHeight: 720,
     });
     return await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("no blob"))), "image/png");
@@ -273,6 +268,7 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
     >
       {/* Nodo oculto para capturar la imagen del reporte */}
       <div
+        ref={captureRef}
         aria-hidden
         style={{
           position: "fixed",
@@ -283,9 +279,7 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
           background: "#fff",
         }}
       >
-        <div ref={captureRef} style={{ width: 900, height: 720, background: "#fff" }}>
-          <FormSheet variant={variant} data={data} />
-        </div>
+        <FormSheet variant={variant} data={data} />
       </div>
 
       <div

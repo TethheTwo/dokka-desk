@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Camera, FileText, X, Image as ImageIcon } from "lucide-react";
-import html2canvas from "html2canvas";
+import { domToCanvas } from "modern-screenshot";
 import { jsPDF } from "jspdf";
 import { toast } from "sonner";
 import { formatCode } from "@/lib/utils";
@@ -67,7 +67,6 @@ export function ReportPreviewModal({
 }: Props) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
   const cachedCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [scale, setScale] = useState(1);
   const [busy, setBusy] = useState<string | null>(null);
@@ -98,23 +97,17 @@ export function ReportPreviewModal({
 
   const renderCanvas = async () => {
     if (cachedCanvasRef.current) return cachedCanvasRef.current;
-    if (variant && data) {
-      cachedCanvasRef.current = renderFormSheetCanvas(variant, data);
-      return cachedCanvasRef.current;
-    }
-    const node = contentRef.current;
+    const node = sheetRef.current;
     if (!node) throw new Error("no node");
-    const canvas = await html2canvas(node, {
-      scale: 1,
+    const savedTransform = node.style.transform;
+    node.style.transform = "none";
+    const canvas = await domToCanvas(node, {
       backgroundColor: "#ffffff",
-      useCORS: false,
-      logging: false,
-      foreignObjectRendering: true,
       width: SHEET_W,
       height: SHEET_H,
-      windowWidth: SHEET_W,
-      windowHeight: SHEET_H,
+      scale: 1,
     });
+    node.style.transform = savedTransform;
     cachedCanvasRef.current = canvas;
     return canvas;
   };
@@ -291,7 +284,7 @@ export function ReportPreviewModal({
                   color: "#0f172a",
                 }}
               >
-                <div ref={contentRef} style={{ width: "100%", height: "100%" }}>
+                <div style={{ width: "100%", height: "100%" }}>
                   {variant && data ? (
                     <FormSheet variant={variant} data={data} />
                   ) : (
@@ -310,173 +303,6 @@ export function ReportPreviewModal({
       </div>
     </div>
   );
-}
-
-/* ---------- Canvas 2D renderer (fast path) ---------- */
-
-function renderFormSheetCanvas(variant: "ap" | "cg", data: FormReportData): HTMLCanvasElement {
-  const canvas = document.createElement("canvas");
-  canvas.width = SHEET_W;
-  canvas.height = SHEET_H;
-  const ctx = canvas.getContext("2d")!;
-  const px = 40, py = 26;
-  const font = (size: number, bold = false) => `${bold ? "bold " : ""}${size}px Arial, sans-serif`;
-
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, SHEET_W, SHEET_H);
-
-  // Heading
-  const code = variant === "ap" ? "F-775" : "F-805";
-  const heading = variant === "ap"
-    ? "FORMULARIO PARA ACCIDENTES PERSONALES PATRIMONIALES   " + code
-    : "FORMULARIO PARA CASOS GENERALES   " + code;
-  ctx.fillStyle = "#0f172a";
-  ctx.font = font(16, true);
-  ctx.textAlign = "center";
-  ctx.fillText(heading, SHEET_W / 2, py + 16);
-
-  // Grid: N° de Registro, Colaborador
-  const gridLabelW = 140;
-  let y = py + 30;
-  ctx.font = font(13);
-  ctx.textAlign = "left";
-  ctx.fillStyle = BRAND;
-  ctx.fillText("N° de Registro", px, y);
-  ctx.fillStyle = "#0f172a";
-  ctx.font = font(13, true);
-  ctx.fillText(String(data.nro ?? "—"), px + gridLabelW, y);
-  y += 18;
-  ctx.fillStyle = BRAND;
-  ctx.font = font(13);
-  ctx.fillText("Colaborador", px, y);
-  ctx.fillStyle = "#0f172a";
-  ctx.font = font(13, true);
-  ctx.fillText(data.colaborador || "—", px + gridLabelW, y);
-  y += 18;
-
-  // Section bar: Datos del Siniestro
-  y += 4;
-  ctx.fillStyle = BAR;
-  ctx.fillRect(px, y, SHEET_W - px * 2, 24);
-  ctx.fillStyle = "#ffffff";
-  ctx.font = font(13, true);
-  ctx.textAlign = "left";
-  ctx.fillText("Datos del Siniestro", px + 10, y + 16);
-  y += 30;
-
-  // Right column: dates
-  const colLabelW = 140;
-  const col2X = px + 10;
-  ctx.font = font(13);
-  ctx.textAlign = "right";
-  ctx.fillStyle = BRAND;
-  ctx.fillText("Fecha de solicitud", col2X + colLabelW, y);
-  ctx.textAlign = "left";
-  ctx.fillStyle = "#0f172a";
-  ctx.fillText(fmtDate(data.fecha_solicitud), col2X + colLabelW + 8, y);
-  y += 18;
-  ctx.textAlign = "right";
-  ctx.fillStyle = BRAND;
-  ctx.fillText("Fecha del siniestro", col2X + colLabelW, y);
-  ctx.textAlign = "left";
-  ctx.fillStyle = "#0f172a";
-  ctx.fillText(fmtDate(data.fecha_siniestro), col2X + colLabelW + 8, y);
-  y += 18;
-  if (variant === "cg" && data.danos_personales) {
-    ctx.textAlign = "right";
-    ctx.fillStyle = BRAND;
-    ctx.fillText("Daños Personales", col2X + colLabelW, y);
-    ctx.textAlign = "left";
-    ctx.fillStyle = "#0f172a";
-    ctx.fillText(data.danos_personales, col2X + colLabelW + 8, y);
-    y += 18;
-  }
-
-  // Fields grid
-  y += 4;
-  const labelW = 170;
-  const drawField = (label: string, value: string | null | undefined) => {
-    ctx.font = font(13);
-    ctx.textAlign = "left";
-    ctx.fillStyle = BRAND;
-    ctx.fillText(label, px, y);
-    const v = value === null || value === undefined || value === "" ? "" : String(value);
-    ctx.strokeStyle = "#94a3b8";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(px + labelW + 10, y - 13, SHEET_W - px * 2 - labelW - 10, 22);
-    ctx.fillStyle = "#0f172a";
-    ctx.fillText(v || "—", px + labelW + 14, y);
-    y += 28;
-  };
-
-  if (variant === "ap") {
-    drawField("Nombre del Accidentado", data.nombre_accidentado);
-    drawField("Carnet del Accidentado", data.carnet_accidentado);
-  } else {
-    drawField("Asegurado", data.asegurado);
-  }
-  drawField("Solicitante", data.solicitante);
-  drawField("Celular", data.celular);
-  drawField("Departamento", data.departamento);
-  drawField("Póliza", data.poliza);
-  drawField("Dirección", data.direccion);
-  drawField("Descripción", data.descripcion);
-
-  // Section bar: Datos del Ejecutivo
-  y += 4;
-  ctx.fillStyle = BAR;
-  ctx.fillRect(px, y, SHEET_W - px * 2, 24);
-  ctx.fillStyle = "#ffffff";
-  ctx.font = font(13, true);
-  ctx.fillText("Datos del Ejecutivo", px + 10, y + 16);
-  y += 30;
-
-  // Left column: ejecutivo fields
-  const drawExecField = (label: string, value: string | null | undefined, tall = false) => {
-    const h = tall ? 56 : 22;
-    ctx.font = font(13);
-    ctx.textAlign = "left";
-    ctx.fillStyle = BRAND;
-    ctx.fillText(label, px, y);
-    const v = value === null || value === undefined || value === "" ? "" : String(value);
-    ctx.strokeStyle = "#94a3b8";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(px + labelW + 10, y - 13, (SHEET_W - px * 2 - labelW - 10) / 2 - 12, h);
-    ctx.fillStyle = "#0f172a";
-    ctx.fillText(v || "—", px + labelW + 14, y);
-    y += h + 6;
-  };
-
-  const execFields = [
-    ["Nombre", data.ejecutivo_nombre],
-    ["Celular", data.ejecutivo_celular],
-    ["Intentos de llamada", data.intentos_llamada],
-  ] as const;
-  const prevY = y;
-  for (const [label, val] of execFields) {
-    drawExecField(label, val);
-  }
-  drawExecField("Observaciones", data.observaciones, true);
-
-  // Right column: tripartita
-  const rightX = SHEET_W / 2 + 20;
-  let y2 = prevY;
-  ctx.font = font(13);
-  ctx.textAlign = "right";
-  ctx.fillStyle = BRAND;
-  ctx.fillText("Hubo tripartita", rightX + colLabelW, y2);
-  ctx.textAlign = "left";
-  ctx.fillStyle = "#0f172a";
-  ctx.fillText(data.hubo_tripartita || "—", rightX + colLabelW + 8, y2);
-  y2 += 22;
-  ctx.textAlign = "right";
-  ctx.fillStyle = BRAND;
-  ctx.fillText("Hora de contacto", rightX + colLabelW, y2);
-  ctx.textAlign = "left";
-  ctx.fillStyle = "#0f172a";
-  ctx.fillText(data.hora_contacto || "—", rightX + colLabelW + 8, y2);
-
-  return canvas;
 }
 
 /* ---------- Form sheet matching F-775 / F-805 ---------- */
