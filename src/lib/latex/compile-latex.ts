@@ -216,6 +216,30 @@ export const compileReportPDF = createServerFn({ method: "POST" })
         timeout: 30000,
       });
 
+      // Run twice for cross-references
+      try {
+        execSync("pdflatex -interaction=nonstopmode -halt-on-error report.tex", {
+          cwd: dir,
+          stdio: "pipe",
+          timeout: 30000,
+        });
+      } catch (e: unknown) {
+        const err = e as any;
+        const logPath = join(dir, "report.log");
+        let log = "";
+        try { log = readFileSync(logPath, "utf-8").slice(-2000); } catch {}
+        throw new Error(`LaTeX error: ${err.stderr?.toString()?.slice(0, 500) || err.message || "unknown"}\n${log.slice(0, 500)}`);
+      }
+
+      // Run twice for cross-references
+      try {
+        execSync("pdflatex -interaction=nonstopmode -halt-on-error report.tex", {
+          cwd: dir,
+          stdio: "pipe",
+          timeout: 30000,
+        });
+      } catch {}
+
       const pdfPath = join(dir, "report.pdf");
       if (!existsSync(pdfPath)) throw new Error("PDF not generated");
 
