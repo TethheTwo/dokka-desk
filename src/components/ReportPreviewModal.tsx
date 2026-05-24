@@ -425,37 +425,25 @@ export function FormSheet({ variant, data }: { variant: "ap" | "cg"; data: FormR
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          columnGap: 20,
-          marginTop: 8,
+          gridTemplateColumns: "130px 1fr",
+          columnGap: 8,
+          rowGap: 4,
           fontSize: 12,
+          marginTop: 8,
         }}
       >
-        <div
-          style={{ display: "grid", gridTemplateColumns: "170px 1fr", columnGap: 8, rowGap: 4 }}
-        >
-          <LabelL>Nombre</LabelL>
-          <InputBox>{data.ejecutivo_nombre}</InputBox>
-          <LabelL>Celular</LabelL>
-          <InputBox>{data.ejecutivo_celular}</InputBox>
-          <LabelL>Intentos de llamada</LabelL>
-          <InputBox>{data.intentos_llamada}</InputBox>
-          <LabelL>Observaciones</LabelL>
-          <InputBox tall>{data.observaciones}</InputBox>
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "140px 1fr",
-            rowGap: 4,
-            alignSelf: "start",
-          }}
-        >
-          <LabelR>Hubo tripartita</LabelR>
-          <Val>{data.hubo_tripartita || "—"}</Val>
-          <LabelR>Hora de contacto</LabelR>
-          <Val>{data.hora_contacto || "—"}</Val>
-        </div>
+        <LabelL>Nombre</LabelL>
+        <InputBox>{data.ejecutivo_nombre}</InputBox>
+        <LabelL>Celular</LabelL>
+        <InputBox>{data.ejecutivo_celular}</InputBox>
+        <LabelL>Intentos de llamada</LabelL>
+        <InputBox>{data.intentos_llamada}</InputBox>
+        <LabelL>Observaciones</LabelL>
+        <InputBox tall>{data.observaciones}</InputBox>
+        <LabelL>Hubo tripartita</LabelL>
+        <InputBox>{data.hubo_tripartita || "—"}</InputBox>
+        <LabelL>Hora de contacto</LabelL>
+        <InputBox>{data.hora_contacto || "—"}</InputBox>
       </div>
     </div>
   );
