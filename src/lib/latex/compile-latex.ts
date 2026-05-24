@@ -22,25 +22,37 @@ function replaceTex(src: string, data: Record<string, string | null | undefined>
 const TEMPLATE_AP = String.raw`\documentclass[a4paper,12pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage[english]{babel}
+\usepackage[spanish,es-tabla]{babel}
 \usepackage{geometry}
 \usepackage{tabularx}
 \usepackage{array}
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{etoolbox}
+\usepackage{fontspec}
 
-\geometry{margin=2cm}
+\setmainfont{Liberation Sans}[
+  Extension=.ttf,
+  BoldFont=LiberationSans-Bold,
+  ItalicFont=LiberationSans-Italic,
+  BoldItalicFont=LiberationSans-BoldItalic,
+]
+
+\geometry{margin=2cm, bottom=2.5cm}
+
+\setlength{\parindent}{0pt}
+\setlength{\tabcolsep}{6pt}
+\renewcommand{\arraystretch}{1.3}
 
 \definecolor{brand}{HTML}{2f7fd6}
 \definecolor{bar}{HTML}{5a8fc4}
 
 \newcommand{\sectionbar}[1]{%
-  \noindent\colorbox{bar}{\parbox{\dimexpr\linewidth-2\fboxsep\relax}{\textcolor{white}{\textbf{#1}}}}\\[4pt]
+  \noindent\colorbox{bar}{\parbox{\dimexpr\linewidth-2\fboxsep\relax}{\textcolor{white}{\textbf{#1}}}}\\[6pt]
 }
 
 \newcommand{\fieldlabel}[1]{\textcolor{brand}{\textbf{#1}}}
-\newcommand{\fieldbox}[1]{\fbox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{\raggedright #1}}}
+\newcommand{\fieldbox}[1]{\fbox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{\raggedright\strut #1\strut}}}
 
 \begin{document}
 \thispagestyle{empty}
@@ -49,35 +61,37 @@ const TEMPLATE_AP = String.raw`\documentclass[a4paper,12pt]{article}
 \textbf{\large FORMULARIO PARA ACCIDENTES PERSONALES PATRIMONIALES   F-775}
 \end{center}
 
+\vspace{4mm}
+
 \sectionbar{Datos del Siniestro}
 
-\begin{tabularx}{\textwidth}{Xr@{\hspace{4mm}}X}
+\begin{tabularx}{\textwidth}{Xr@{\hspace{6mm}}X}
   & \fieldlabel{Fecha de solicitud} & __FECHA_SOLICITUD__ \\
   & \fieldlabel{Fecha del siniestro} & __FECHA_SINIESTRO__ \\
 \end{tabularx}
 
-\vspace{4mm}
+\vspace{6mm}
 
 \noindent
-\begin{tabularx}{\textwidth}{p{4cm}X}
-  \fieldlabel{Nombre del Accidentado} & \fieldbox{__ACCIDENTADO__} \\
-  \fieldlabel{Carnet del Accidentado} & \fieldbox{__CARNET__} \\
-  \fieldlabel{Solicitante} & \fieldbox{__SOLICITANTE__} \\
-  \fieldlabel{Celular} & \fieldbox{__CELULAR__} \\
-  \fieldlabel{Departamento} & \fieldbox{__DEPARTAMENTO__} \\
-  \fieldlabel{Póliza} & \fieldbox{__POLIZA__} \\
-  \fieldlabel{Dirección} & \fieldbox{__DIRECCION__} \\
-  \fieldlabel{Descripción} & \fieldbox{__DESCRIPCION__} \\
+\begin{tabularx}{\textwidth}{p{4.5cm}X}
+  \fieldlabel{Nombre del Accidentado} & \fieldbox{__ACCIDENTADO__} \\[2pt]
+  \fieldlabel{Carnet del Accidentado} & \fieldbox{__CARNET__} \\[2pt]
+  \fieldlabel{Solicitante} & \fieldbox{__SOLICITANTE__} \\[2pt]
+  \fieldlabel{Celular} & \fieldbox{__CELULAR__} \\[2pt]
+  \fieldlabel{Departamento} & \fieldbox{__DEPARTAMENTO__} \\[2pt]
+  \fieldlabel{Póliza} & \fieldbox{__POLIZA__} \\[2pt]
+  \fieldlabel{Dirección} & \fieldbox{__DIRECCION__} \\[2pt]
+  \fieldlabel{Descripción} & \fieldbox{__DESCRIPCION__} \\[2pt]
 \end{tabularx}
 
 \sectionbar{Datos del Ejecutivo}
 
 \noindent
-\begin{tabularx}{\textwidth}{p{4cm}Xp{4cm}X}
-  \fieldlabel{Nombre} & \fieldbox{__EJECUTIVO__} & \fieldlabel{Hubo tripartita} & \fieldbox{__TRI__} \\
-  \fieldlabel{Celular} & \fieldbox{__EJ_CEL__} & \fieldlabel{Hora de contacto} & \fieldbox{__HORA__} \\
-  \fieldlabel{Intentos de llamada} & \fieldbox{__INTENTOS__} \\
-  \fieldlabel{Observaciones} & \multicolumn{3}{X}{\fieldbox{__OBS__}} \\
+\begin{tabularx}{\textwidth}{p{4.5cm}Xp{4cm}X}
+  \fieldlabel{Nombre} & \fieldbox{__EJECUTIVO__} & \fieldlabel{Hubo tripartita} & \fieldbox{__TRI__} \\[2pt]
+  \fieldlabel{Celular} & \fieldbox{__EJ_CEL__} & \fieldlabel{Hora de contacto} & \fieldbox{__HORA__} \\[2pt]
+  \fieldlabel{Intentos de llamada} & \fieldbox{__INTENTOS__} \\[2pt]
+  \fieldlabel{Observaciones} & \multicolumn{3}{X}{\fieldbox{__OBS__}} \\[2pt]
 \end{tabularx}
 
 \def\footertext{__FOOTER__}
@@ -88,25 +102,37 @@ const TEMPLATE_AP = String.raw`\documentclass[a4paper,12pt]{article}
 const TEMPLATE_CG = String.raw`\documentclass[a4paper,12pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage[english]{babel}
+\usepackage[spanish,es-tabla]{babel}
 \usepackage{geometry}
 \usepackage{tabularx}
 \usepackage{array}
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{etoolbox}
+\usepackage{fontspec}
 
-\geometry{margin=2cm}
+\setmainfont{Liberation Sans}[
+  Extension=.ttf,
+  BoldFont=LiberationSans-Bold,
+  ItalicFont=LiberationSans-Italic,
+  BoldItalicFont=LiberationSans-BoldItalic,
+]
+
+\geometry{margin=2cm, bottom=2.5cm}
+
+\setlength{\parindent}{0pt}
+\setlength{\tabcolsep}{6pt}
+\renewcommand{\arraystretch}{1.3}
 
 \definecolor{brand}{HTML}{2f7fd6}
 \definecolor{bar}{HTML}{5a8fc4}
 
 \newcommand{\sectionbar}[1]{%
-  \noindent\colorbox{bar}{\parbox{\dimexpr\linewidth-2\fboxsep\relax}{\textcolor{white}{\textbf{#1}}}}\\[4pt]
+  \noindent\colorbox{bar}{\parbox{\dimexpr\linewidth-2\fboxsep\relax}{\textcolor{white}{\textbf{#1}}}}\\[6pt]
 }
 
 \newcommand{\fieldlabel}[1]{\textcolor{brand}{\textbf{#1}}}
-\newcommand{\fieldbox}[1]{\fbox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{\raggedright #1}}}
+\newcommand{\fieldbox}[1]{\fbox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{\raggedright\strut #1\strut}}}
 
 \begin{document}
 \thispagestyle{empty}
@@ -115,35 +141,37 @@ const TEMPLATE_CG = String.raw`\documentclass[a4paper,12pt]{article}
 \textbf{\large FORMULARIO PARA CASOS GENERALES   F-805}
 \end{center}
 
+\vspace{4mm}
+
 \sectionbar{Datos del Siniestro}
 
-\begin{tabularx}{\textwidth}{Xr@{\hspace{4mm}}X}
+\begin{tabularx}{\textwidth}{Xr@{\hspace{6mm}}X}
   & \fieldlabel{Fecha de solicitud} & __FECHA_SOLICITUD__ \\
   & \fieldlabel{Fecha del siniestro} & __FECHA_SINIESTRO__ \\
   & \fieldlabel{Daños Personales} & __DANOS__ \\
 \end{tabularx}
 
-\vspace{4mm}
+\vspace{6mm}
 
 \noindent
-\begin{tabularx}{\textwidth}{p{4cm}X}
-  \fieldlabel{Asegurado} & \fieldbox{__ASEGURADO__} \\
-  \fieldlabel{Solicitante} & \fieldbox{__SOLICITANTE__} \\
-  \fieldlabel{Celular} & \fieldbox{__CELULAR__} \\
-  \fieldlabel{Departamento} & \fieldbox{__DEPARTAMENTO__} \\
-  \fieldlabel{Póliza} & \fieldbox{__POLIZA__} \\
-  \fieldlabel{Dirección} & \fieldbox{__DIRECCION__} \\
-  \fieldlabel{Descripción} & \fieldbox{__DESCRIPCION__} \\
+\begin{tabularx}{\textwidth}{p{4.5cm}X}
+  \fieldlabel{Asegurado} & \fieldbox{__ASEGURADO__} \\[2pt]
+  \fieldlabel{Solicitante} & \fieldbox{__SOLICITANTE__} \\[2pt]
+  \fieldlabel{Celular} & \fieldbox{__CELULAR__} \\[2pt]
+  \fieldlabel{Departamento} & \fieldbox{__DEPARTAMENTO__} \\[2pt]
+  \fieldlabel{Póliza} & \fieldbox{__POLIZA__} \\[2pt]
+  \fieldlabel{Dirección} & \fieldbox{__DIRECCION__} \\[2pt]
+  \fieldlabel{Descripción} & \fieldbox{__DESCRIPCION__} \\[2pt]
 \end{tabularx}
 
 \sectionbar{Datos del Ejecutivo}
 
 \noindent
-\begin{tabularx}{\textwidth}{p{4cm}Xp{4cm}X}
-  \fieldlabel{Nombre} & \fieldbox{__EJECUTIVO__} & \fieldlabel{Hubo tripartita} & \fieldbox{__TRI__} \\
-  \fieldlabel{Celular} & \fieldbox{__EJ_CEL__} & \fieldlabel{Hora de contacto} & \fieldbox{__HORA__} \\
-  \fieldlabel{Intentos de llamada} & \fieldbox{__INTENTOS__} \\
-  \fieldlabel{Observaciones} & \multicolumn{3}{X}{\fieldbox{__OBS__}} \\
+\begin{tabularx}{\textwidth}{p{4.5cm}Xp{4cm}X}
+  \fieldlabel{Nombre} & \fieldbox{__EJECUTIVO__} & \fieldlabel{Hubo tripartita} & \fieldbox{__TRI__} \\[2pt]
+  \fieldlabel{Celular} & \fieldbox{__EJ_CEL__} & \fieldlabel{Hora de contacto} & \fieldbox{__HORA__} \\[2pt]
+  \fieldlabel{Intentos de llamada} & \fieldbox{__INTENTOS__} \\[2pt]
+  \fieldlabel{Observaciones} & \multicolumn{3}{X}{\fieldbox{__OBS__}} \\[2pt]
 \end{tabularx}
 
 \def\footertext{__FOOTER__}
@@ -154,17 +182,33 @@ const TEMPLATE_CG = String.raw`\documentclass[a4paper,12pt]{article}
 const TEMPLATE_GENERIC = String.raw`\documentclass[a4paper,12pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage[english]{babel}
+\usepackage[spanish,es-tabla]{babel}
 \usepackage{geometry}
 \usepackage{tabularx}
 \usepackage{array}
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{etoolbox}
+\usepackage{fontspec}
 
-\geometry{margin=2cm}
+\setmainfont{Liberation Sans}[
+  Extension=.ttf,
+  BoldFont=LiberationSans-Bold,
+  ItalicFont=LiberationSans-Italic,
+  BoldItalicFont=LiberationSans-BoldItalic,
+]
+
+\geometry{margin=2cm, bottom=2.5cm}
+
+\setlength{\parindent}{0pt}
+\setlength{\tabcolsep}{6pt}
+\renewcommand{\arraystretch}{1.3}
 
 \definecolor{brand}{HTML}{2f7fd6}
+
+\newcommand{\sectionbar}[1]{%
+  \noindent\colorbox{brand}{\parbox{\dimexpr\linewidth-2\fboxsep\relax}{\textcolor{white}{\textbf{#1}}}}\\[6pt]
+}
 
 \begin{document}
 \thispagestyle{empty}
@@ -176,7 +220,7 @@ const TEMPLATE_GENERIC = String.raw`\documentclass[a4paper,12pt]{article}
 \noindent\hfill\textbf{Reporte N°}\\[-2pt]
 \hfill{\huge\textcolor{brand}{\textbf{__NRO__}}}
 
-\vspace{4mm}
+\vspace{6mm}
 \hrule
 \vspace{4mm}
 
