@@ -1,6 +1,41 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
+/**
+ * Pads a canvas with white bars to achieve A4 landscape aspect ratio (1.414:1).
+ * Current ratio (900×720 = 1.25:1) is taller than A4 → padding added on left/right.
+ * Returns a new canvas with A4 proportions; original content is centered.
+ */
+export function padToA4(canvas: HTMLCanvasElement): HTMLCanvasElement {
+  const A4 = 297 / 210;
+  const srcW = canvas.width;
+  const srcH = canvas.height;
+  const srcR = srcW / srcH;
+
+  let dstW: number, dstH: number, ox: number, oy: number;
+
+  if (srcR > A4) {
+    dstW = srcW;
+    dstH = Math.round(srcW / A4);
+    ox = 0;
+    oy = Math.round((dstH - srcH) / 2);
+  } else {
+    dstH = srcH;
+    dstW = Math.round(srcH * A4);
+    ox = Math.round((dstW - srcW) / 2);
+    oy = 0;
+  }
+
+  const c = document.createElement("canvas");
+  c.width = dstW;
+  c.height = dstH;
+  const ctx = c.getContext("2d")!;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, dstW, dstH);
+  ctx.drawImage(canvas, ox, oy);
+  return c;
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
