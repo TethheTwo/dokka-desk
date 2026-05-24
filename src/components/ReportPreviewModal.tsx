@@ -331,13 +331,13 @@ export function FormSheet({ variant, data }: { variant: "ap" | "cg"; data: FormR
         fontFamily: "Arial, Helvetica, sans-serif",
         color: "#0f172a",
         background: "#ffffff",
-        fontSize: 13,
+        fontSize: 11,
       }}
     >
       <div
         style={{
           textAlign: "center",
-          fontSize: 15,
+          fontSize: 13,
           fontWeight: 700,
           color: "#0f172a",
           marginBottom: 10,
@@ -351,7 +351,7 @@ export function FormSheet({ variant, data }: { variant: "ap" | "cg"; data: FormR
           display: "grid",
           gridTemplateColumns: "140px 1fr",
           rowGap: 3,
-          fontSize: 13,
+          fontSize: 11,
           marginBottom: 8,
         }}
       >
@@ -387,7 +387,7 @@ export function FormSheet({ variant, data }: { variant: "ap" | "cg"; data: FormR
           gridTemplateColumns: "170px 1fr",
           columnGap: 8,
           rowGap: 4,
-          fontSize: 13,
+          fontSize: 11,
           marginTop: 8,
         }}
       >
@@ -428,7 +428,7 @@ export function FormSheet({ variant, data }: { variant: "ap" | "cg"; data: FormR
           gridTemplateColumns: "1fr 1fr",
           columnGap: 16,
           marginTop: 8,
-          fontSize: 13,
+          fontSize: 11,
         }}
       >
         <div
@@ -466,7 +466,7 @@ function SectionBar({ children }: { children: React.ReactNode }) {
     <div
       style={{
         color: "#ffffff",
-        fontSize: 13,
+        fontSize: 11,
         fontWeight: 600,
         padding: "4px 10px",
         borderRadius: 2,
@@ -510,7 +510,7 @@ function InputBox({ children, tall }: { children: React.ReactNode; tall?: boolea
         wordBreak: "break-word",
         whiteSpace: "pre-wrap",
         minHeight: tall ? 40 : 20,
-        fontSize: 13,
+        fontSize: 11,
       }}
     >
       {v}
