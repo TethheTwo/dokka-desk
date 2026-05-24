@@ -1,0 +1,61 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\geometry{margin=2cm}
+
+\definecolor{brand}{HTML}{2f7fd6}
+\definecolor{bar}{HTML}{5a8fc4}
+
+\newcommand{\sectionbar}[1]{%
+  \noindent\colorbox{bar}{\parbox{\dimexpr\linewidth-2\fboxsep\relax}{\textcolor{white}{\textbf{#1}}}}\\[4pt]
+}
+
+\newcommand{\fieldlabel}[1]{\textcolor{brand}{\textbf{#1}}}
+\newcommand{\fieldbox}[1]{\fbox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{\raggedright #1}}}
+
+\begin{document}
+\thispagestyle{empty}
+
+\begin{center}
+\textbf{\large FORMULARIO PARA ACCIDENTES PERSONALES PATRIMONIALES   F-775}
+\end{center}
+
+\sectionbar{Datos del Siniestro}
+
+\begin{tabularx}{\textwidth}{Xr@{\hspace{4mm}}X}
+  & \fieldlabel{Fecha de solicitud} & __FECHA_SOLICITUD__ \\
+  & \fieldlabel{Fecha del siniestro} & __FECHA_SINIESTRO__ \\
+\end{tabularx}
+
+\vspace{4mm}
+
+\noindent
+\begin{tabularx}{\textwidth}{p{4cm}X}
+  \fieldlabel{Nombre del Accidentado} & \fieldbox{__ACCIDENTADO__} \\
+  \fieldlabel{Carnet del Accidentado} & \fieldbox{__CARNET__} \\
+  \fieldlabel{Solicitante} & \fieldbox{__SOLICITANTE__} \\
+  \fieldlabel{Celular} & \fieldbox{__CELULAR__} \\
+  \fieldlabel{Departamento} & \fieldbox{__DEPARTAMENTO__} \\
+  \fieldlabel{Póliza} & \fieldbox{__POLIZA__} \\
+  \fieldlabel{Dirección} & \fieldbox{__DIRECCION__} \\
+  \fieldlabel{Descripción} & \fieldbox{__DESCRIPCION__} \\
+\end{tabularx}
+
+\sectionbar{Datos del Ejecutivo}
+
+\noindent
+\begin{tabularx}{\textwidth}{p{4cm}Xp{4cm}X}
+  \fieldlabel{Nombre} & \fieldbox{__EJECUTIVO__} & \fieldlabel{Hubo tripartita} & \fieldbox{__TRI__} \\
+  \fieldlabel{Celular} & \fieldbox{__EJ_CEL__} & \fieldlabel{Hora de contacto} & \fieldbox{__HORA__} \\
+  \fieldlabel{Intentos de llamada} & \fieldbox{__INTENTOS__} \\
+  \fieldlabel{Observaciones} & \multicolumn{3}{X}{\fieldbox{__OBS__}} \\
+\end{tabularx}
+
+\end{document}
