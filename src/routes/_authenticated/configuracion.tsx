@@ -1,7 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
 import { useCurrentUser, setUserProfile } from "@/lib/user-store";
+import { reloadProfile } from "@/lib/auth";
+import { updateMyEmail } from "@/lib/update-my-email.functions";
 import { AppTopBar } from "@/components/AppTopBar";
 import { PageHeader } from "@/components/PageHeader";
 import { AvatarCard } from "@/components/AvatarCard";
@@ -34,6 +37,7 @@ function ProfileCard() {
   const user = useCurrentUser();
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
+  const updateMyEmailFn = useServerFn(updateMyEmail);
 
   useEffect(() => {
     setName(user.name);
@@ -42,8 +46,14 @@ function ProfileCard() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    const newName = name.trim();
+    const newEmail = email.trim();
     try {
-      await setUserProfile({ name: name.trim(), email: email.trim() });
+      if (newEmail !== user.email) {
+        await updateMyEmailFn({ data: { email: newEmail } });
+      }
+      await setUserProfile({ name: newName, email: newEmail });
+      await reloadProfile();
       toast.success("Perfil actualizado correctamente");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "No se pudo actualizar el perfil");
