@@ -3,6 +3,7 @@ import { Camera, FileText, X, Image as ImageIcon } from "lucide-react";
 import { domToCanvas } from "modern-screenshot";
 import { jsPDF } from "jspdf";
 import { toast } from "sonner";
+import { padToA4 } from "@/lib/utils";
 import { formatCode } from "@/lib/utils";
 
 export interface ReportField {
@@ -108,8 +109,8 @@ export function ReportPreviewModal({
       scale: 1,
     });
     node.style.transform = savedTransform;
-    cachedCanvasRef.current = canvas;
-    return canvas;
+    cachedCanvasRef.current = padToA4(canvas);
+    return cachedCanvasRef.current;
   };
 
   const fileBase = () => {
