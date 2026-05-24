@@ -22,7 +22,7 @@ function replaceTex(src: string, data: Record<string, string | null | undefined>
 const TEMPLATE_AP = String.raw`\documentclass[a4paper,12pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage[spanish]{babel}
+\usepackage[english]{babel}
 \usepackage{geometry}
 \usepackage{tabularx}
 \usepackage{array}
@@ -88,7 +88,7 @@ const TEMPLATE_AP = String.raw`\documentclass[a4paper,12pt]{article}
 const TEMPLATE_CG = String.raw`\documentclass[a4paper,12pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage[spanish]{babel}
+\usepackage[english]{babel}
 \usepackage{geometry}
 \usepackage{tabularx}
 \usepackage{array}
@@ -154,7 +154,7 @@ const TEMPLATE_CG = String.raw`\documentclass[a4paper,12pt]{article}
 const TEMPLATE_GENERIC = String.raw`\documentclass[a4paper,12pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage[spanish]{babel}
+\usepackage[english]{babel}
 \usepackage{geometry}
 \usepackage{tabularx}
 \usepackage{array}
