@@ -7,6 +7,7 @@
 \usepackage{array}
 \usepackage{xcolor}
 \usepackage{hyperref}
+\usepackage{etoolbox}
 
 \geometry{margin=2cm}
 
@@ -57,5 +58,8 @@
   \fieldlabel{Intentos de llamada} & \fieldbox{__INTENTOS__} \\
   \fieldlabel{Observaciones} & \multicolumn{3}{X}{\fieldbox{__OBS__}} \\
 \end{tabularx}
+
+\def\footertext{__FOOTER__}
+\ifdefempty{\footertext}{}{\vfill\noindent\textcolor{gray}{\tiny \footertext}}
 
 \end{document}

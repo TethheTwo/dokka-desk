@@ -7,6 +7,7 @@
 \usepackage{array}
 \usepackage{xcolor}
 \usepackage{hyperref}
+\usepackage{etoolbox}
 
 \geometry{margin=2cm}
 
@@ -28,5 +29,8 @@
 \vspace{4mm}
 
 __CONTENT__
+
+\def\footertext{__FOOTER__}
+\ifdefempty{\footertext}{}{\vfill\noindent\textcolor{gray}{\tiny \footertext}}
 
 \end{document}

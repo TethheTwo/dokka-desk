@@ -1,9 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Camera, FileText, X, Image as ImageIcon } from "lucide-react";
-import { domToCanvas } from "modern-screenshot";
-import { jsPDF } from "jspdf";
+import { useEffect, useRef, useState } from "react";
+import { Camera, FileText, X, Image as ImageIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCode } from "@/lib/utils";
+import { compileReportPDF, compileReportPNG } from "@/lib/latex/compile-latex";
 
 export interface ReportField {
   label: string;
@@ -49,11 +48,40 @@ interface Props {
   data?: FormReportData;
 }
 
-// Sheet: A4 portrait (595 × 842 px at 72 DPI)
-const SHEET_W = 595;
-const SHEET_H = 842;
-const BRAND = "#2f7fd6";
-const BAR = "#5a8fc4";
+function buildFormFields(data: FormReportData, variant: "ap" | "cg") {
+  return {
+    FECHA_SOLICITUD: fmtDate(data.fecha_solicitud),
+    FECHA_SINIESTRO: fmtDate(data.fecha_siniestro),
+    ACCIDENTADO: variant === "ap" ? data.nombre_accidentado : null,
+    CARNET: variant === "ap" ? data.carnet_accidentado : null,
+    ASEGURADO: variant === "cg" ? data.asegurado : null,
+    DANOS: variant === "cg" ? data.danos_personales : null,
+    SOLICITANTE: data.solicitante,
+    CELULAR: data.celular,
+    DEPARTAMENTO: data.departamento,
+    POLIZA: data.poliza,
+    DIRECCION: data.direccion,
+    DESCRIPCION: data.descripcion,
+    EJECUTIVO: data.ejecutivo_nombre,
+    EJ_CEL: data.ejecutivo_celular,
+    INTENTOS: data.intentos_llamada,
+    OBS: data.observaciones,
+    TRI: data.hubo_tripartita,
+    HORA: data.hora_contacto,
+    FOOTER: "",
+  };
+}
+
+function buildSectionsLatex(sections: ReportSection[]): string {
+  return sections
+    .map(
+      (s) =>
+        `\\sectionbar{${s.title}}\n\\begin{tabularx}{\\textwidth}{p{4cm}X}\n  ${s.fields
+          .map((f) => `\\fieldlabel{${f.label}} & \\fieldbox{${f.value ?? "—"}} \\\\`)
+          .join("\n  ")}\n\\end{tabularx}`,
+    )
+    .join("\n\n");
+}
 
 export function ReportPreviewModal({
   open,
@@ -65,11 +93,55 @@ export function ReportPreviewModal({
   variant,
   data,
 }: Props) {
-  const sheetRef = useRef<HTMLDivElement>(null);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const cachedCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [scale, setScale] = useState(1);
   const [busy, setBusy] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const cachedPdf = useRef<string | null>(null);
+  const cachedPng = useRef<string | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  const buildFields = (): Record<string, string | null | undefined> => {
+    if (variant && data) return buildFormFields(data, variant);
+    return {
+      TITLE: title,
+      SUBTITLE: subtitle ?? "",
+      NRO: String(nro ?? ""),
+      CONTENT: buildSectionsLatex(sections ?? []),
+      FOOTER: "",
+    };
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    setLoadError(false);
+    if (cachedPng.current) {
+      setPreviewUrl(cachedPng.current);
+      return;
+    }
+    setLoading(true);
+    compileReportPNG({
+      data: { variant: variant ?? "generic", nro, title, subtitle, fields: buildFields() },
+    })
+      .then((r: { png: string; mime: string }) => {
+        const url = `data:image/png;base64,${r.png}`;
+        cachedPng.current = url;
+        setPreviewUrl(url);
+      })
+      .catch((e: unknown) => {
+        console.error(e);
+        setLoadError(true);
+        toast.error("No se pudo generar la vista previa");
+      })
+      .finally(() => setLoading(false));
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      setPreviewUrl(null);
+      setLoadError(false);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -80,37 +152,7 @@ export function ReportPreviewModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  useLayoutEffect(() => {
-    if (!open) return;
-    const el = stageRef.current;
-    if (!el) return;
-    const recalc = () => {
-      setScale(Math.min(1, el.clientWidth / SHEET_W));
-    };
-    recalc();
-    const ro = new ResizeObserver(recalc);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [open]);
-
   if (!open) return null;
-
-  const renderCanvas = async () => {
-    if (cachedCanvasRef.current) return cachedCanvasRef.current;
-    const node = sheetRef.current;
-    if (!node) throw new Error("no node");
-    const savedTransform = node.style.transform;
-    node.style.transform = "none";
-    const canvas = await domToCanvas(node, {
-      backgroundColor: "#ffffff",
-      width: SHEET_W,
-      height: SHEET_H,
-      scale: 2,
-    });
-    node.style.transform = savedTransform;
-    cachedCanvasRef.current = canvas;
-    return canvas;
-  };
 
   const fileBase = () => {
     const prefix = variant === "ap" ? "AP" : variant === "cg" ? "CG" : "RP";
@@ -124,12 +166,17 @@ export function ReportPreviewModal({
     return `${slug}_${code}`;
   };
 
+  const ensurePngBlob = async (): Promise<Blob> => {
+    const url = cachedPng.current;
+    if (!url) throw new Error("No cached PNG");
+    const resp = await fetch(url);
+    return resp.blob();
+  };
+
   const downloadPNG = async () => {
     try {
       setBusy("png");
-      const c = await renderCanvas();
-      const blob = await new Promise<Blob | null>((resolve) => c.toBlob(resolve, "image/png"));
-      if (!blob) throw new Error("no blob");
+      const blob = await ensurePngBlob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -148,19 +195,21 @@ export function ReportPreviewModal({
   const downloadPDF = async () => {
     try {
       setBusy("pdf");
-      const c = await renderCanvas();
-      const img = c.toDataURL("image/png");
-      const pdf = new jsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const margin = 20;
-      const targetW = pageW - margin * 2;
-      const targetH = pageH - margin * 2;
-      const ratio = Math.min(targetW / c.width, targetH / c.height);
-      const w = c.width * ratio;
-      const h = c.height * ratio;
-      pdf.addImage(img, "PNG", (pageW - w) / 2, (pageH - h) / 2, w, h);
-      pdf.save(`${fileBase()}.pdf`);
+      const pdfData = cachedPdf.current;
+      if (!pdfData) {
+        const r = await compileReportPDF({
+          data: { variant: variant ?? "generic", nro, title, subtitle, fields: buildFields() },
+        });
+        cachedPdf.current = r.pdf;
+      }
+      const bytes = Uint8Array.from(atob(cachedPdf.current!), (c) => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${fileBase()}.pdf`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
       toast.success("PDF descargado");
     } catch (e) {
       console.error(e);
@@ -170,47 +219,38 @@ export function ReportPreviewModal({
     }
   };
 
-  const downloadCanvasAsFallback = (c: HTMLCanvasElement) => {
-    const a = document.createElement("a");
-    a.href = c.toDataURL("image/png");
-    a.download = `${fileBase()}.png`;
-    a.click();
-  };
-
   const copyToClipboard = async () => {
     try {
       setBusy("copy");
       const tid = toast.loading("Capturando reporte…");
-      const c = await renderCanvas();
+      const blob = await ensurePngBlob();
       toast.dismiss(tid);
       if (
         typeof window === "undefined" ||
         typeof (window as any).ClipboardItem === "undefined" ||
         !navigator.clipboard?.write
       ) {
-        downloadCanvasAsFallback(c);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${fileBase()}.png`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
         toast.success("Tu navegador no permite copiar imágenes — se descargó como archivo");
         return;
       }
-      await new Promise<void>((resolve) => {
-        c.toBlob(async (blob) => {
-          if (!blob) {
-            downloadCanvasAsFallback(c);
-            toast.success("Se descargó como archivo");
-            resolve();
-            return;
-          }
-          try {
-            await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-            toast.success("Reporte copiado como imagen al portapapeles");
-          } catch {
-            downloadCanvasAsFallback(c);
-            toast.success("No se pudo copiar — se descargó como archivo");
-          } finally {
-            resolve();
-          }
-        }, "image/png");
-      });
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        toast.success("Reporte copiado como imagen al portapapeles");
+      } catch {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${fileBase()}.png`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+        toast.success("No se pudo copiar — se descargó como archivo");
+      }
     } catch (e) {
       console.error(e);
       toast.error("No se pudo generar la captura");
@@ -218,6 +258,8 @@ export function ReportPreviewModal({
       setBusy(null);
     }
   };
+
+  const SHEET_ASPECT = 595 / 842;
 
   return (
     <div
@@ -227,7 +269,7 @@ export function ReportPreviewModal({
       }}
     >
       <div
-        className="bg-background rounded-xl shadow-2xl border border-border w-full max-w-[960px] animate-in zoom-in-95 fade-in-0 duration-200"
+        className="bg-background rounded-xl shadow-2xl border border-border w-full max-w-[720px] animate-in zoom-in-95 fade-in-0 duration-200"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-2 border-b border-border">
@@ -264,39 +306,36 @@ export function ReportPreviewModal({
         </div>
 
         <div className="p-4 bg-muted/40 rounded-b-xl">
-          <div
-            ref={stageRef}
-            className="mx-auto"
-            style={{ width: "100%", maxWidth: `${SHEET_W}px` }}
-          >
+          <div className="mx-auto" style={{ width: "100%", maxWidth: "595px" }}>
             <div
               className="relative bg-white shadow-lg border border-slate-300 rounded-sm overflow-hidden mx-auto"
-              style={{ width: `${SHEET_W * scale}px`, height: `${SHEET_H * scale}px` }}
+              style={{ width: "100%" }}
             >
-              <div
-                ref={sheetRef}
-                style={{
-                  width: `${SHEET_W}px`,
-                  height: `${SHEET_H}px`,
-                  transform: `scale(${scale})`,
-                  transformOrigin: "top left",
-                  background: "#ffffff",
-                  color: "#0f172a",
-                }}
-              >
-                <div style={{ width: "100%", height: "100%" }}>
-                  {variant && data ? (
-                    <FormSheet variant={variant} data={data} />
-                  ) : (
-                    <GenericSheet
-                      title={title}
-                      subtitle={subtitle}
-                      nro={nro}
-                      sections={sections ?? []}
-                    />
-                  )}
+              {loading && (
+                <div
+                  className="flex items-center justify-center text-slate-400"
+                  style={{ aspectRatio: `${SHEET_ASPECT}` }}
+                >
+                  <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
-              </div>
+              )}
+              {loadError && (
+                <div
+                  className="flex items-center justify-center text-red-400 text-sm"
+                  style={{ aspectRatio: `${SHEET_ASPECT}` }}
+                >
+                  Error al generar la vista previa
+                </div>
+              )}
+              {previewUrl && (
+                <img
+                  ref={imgRef}
+                  src={previewUrl}
+                  alt="Vista previa del reporte"
+                  className="block w-full h-auto"
+                  style={{ display: "block" }}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -305,7 +344,74 @@ export function ReportPreviewModal({
   );
 }
 
-/* ---------- Form sheet matching F-775 / F-805 ---------- */
+function fmtDate(s?: string | null) {
+  if (!s) return "—";
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+}
+
+/* ---------- React FormSheet (kept for public report pages) ---------- */
+
+const _BRAND = "#2f7fd6";
+const _BAR = "#5a8fc4";
+
+function _SectionBar({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        color: "#ffffff",
+        fontSize: 13,
+        fontWeight: 600,
+        padding: "6px 10px",
+        borderRadius: 2,
+        background: _BAR,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+function _LabelL({ children }: { children: React.ReactNode }) {
+  return <div style={{ fontWeight: 600, lineHeight: "24px", color: _BRAND }}>{children}</div>;
+}
+function _LabelR({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        fontWeight: 600,
+        textAlign: "right",
+        paddingRight: 10,
+        lineHeight: "24px",
+        color: _BRAND,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+function _Val({ children }: { children: React.ReactNode }) {
+  return <div style={{ color: "#0f172a", lineHeight: "24px" }}>{children}</div>;
+}
+function _InputBox({ children, tall }: { children: React.ReactNode; tall?: boolean }) {
+  const v = children === null || children === undefined || children === "" ? "" : String(children);
+  return (
+    <div
+      style={{
+        border: "1px solid #94a3b8",
+        background: "#ffffff",
+        padding: "4px 10px",
+        color: "#0f172a",
+        wordBreak: "break-word",
+        whiteSpace: "pre-wrap",
+        minHeight: tall ? 56 : 24,
+        fontSize: 13,
+      }}
+    >
+      {v}
+    </div>
+  );
+}
 
 export function FormSheet({ variant, data }: { variant: "ap" | "cg"; data: FormReportData }) {
   const code = variant === "ap" ? "F-775" : "F-805";
@@ -348,27 +454,27 @@ export function FormSheet({ variant, data }: { variant: "ap" | "cg"; data: FormR
           marginBottom: 10,
         }}
       >
-        <div style={{ fontWeight: 600, color: BRAND }}>N° de Registro</div>
+        <div style={{ fontWeight: 600, color: _BRAND }}>N° de Registro</div>
         <div style={{ color: "#0f172a", fontWeight: 600 }}>{data.nro ?? "—"}</div>
-        <div style={{ fontWeight: 600, color: BRAND }}>Colaborador</div>
+        <div style={{ fontWeight: 600, color: _BRAND }}>Colaborador</div>
         <div style={{ color: "#0f172a" }}>{data.colaborador || "—"}</div>
       </div>
 
-      <SectionBar>Datos del Siniestro</SectionBar>
+      <_SectionBar>Datos del Siniestro</_SectionBar>
 
       <div
         style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 16, marginTop: 10 }}
       >
         <div />
         <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", rowGap: 4, fontSize: 13 }}>
-          <LabelR>Fecha de solicitud</LabelR>
-          <Val>{fmtDate(data.fecha_solicitud)}</Val>
-          <LabelR>Fecha del siniestro</LabelR>
-          <Val>{fmtDate(data.fecha_siniestro)}</Val>
+          <_LabelR>Fecha de solicitud</_LabelR>
+          <_Val>{fmtDate(data.fecha_solicitud)}</_Val>
+          <_LabelR>Fecha del siniestro</_LabelR>
+          <_Val>{fmtDate(data.fecha_siniestro)}</_Val>
           {variant === "cg" && (
             <>
-              <LabelR>Daños Personales</LabelR>
-              <Val>{data.danos_personales || "—"}</Val>
+              <_LabelR>Daños Personales</_LabelR>
+              <_Val>{data.danos_personales || "—"}</_Val>
             </>
           )}
         </div>
@@ -386,33 +492,33 @@ export function FormSheet({ variant, data }: { variant: "ap" | "cg"; data: FormR
       >
         {variant === "ap" ? (
           <>
-            <LabelL>Nombre del Accidentado</LabelL>
-            <InputBox>{data.nombre_accidentado}</InputBox>
-            <LabelL>Carnet del Accidentado</LabelL>
-            <InputBox>{data.carnet_accidentado}</InputBox>
+            <_LabelL>Nombre del Accidentado</_LabelL>
+            <_InputBox>{data.nombre_accidentado}</_InputBox>
+            <_LabelL>Carnet del Accidentado</_LabelL>
+            <_InputBox>{data.carnet_accidentado}</_InputBox>
           </>
         ) : (
           <>
-            <LabelL>Asegurado</LabelL>
-            <InputBox>{data.asegurado}</InputBox>
+            <_LabelL>Asegurado</_LabelL>
+            <_InputBox>{data.asegurado}</_InputBox>
           </>
         )}
-        <LabelL>Solicitante</LabelL>
-        <InputBox>{data.solicitante}</InputBox>
-        <LabelL>Celular</LabelL>
-        <InputBox>{data.celular}</InputBox>
-        <LabelL>Departamento</LabelL>
-        <InputBox>{data.departamento}</InputBox>
-        <LabelL>Póliza</LabelL>
-        <InputBox>{data.poliza}</InputBox>
-        <LabelL>Dirección</LabelL>
-        <InputBox>{data.direccion}</InputBox>
-        <LabelL>Descripción</LabelL>
-        <InputBox>{data.descripcion}</InputBox>
+        <_LabelL>Solicitante</_LabelL>
+        <_InputBox>{data.solicitante}</_InputBox>
+        <_LabelL>Celular</_LabelL>
+        <_InputBox>{data.celular}</_InputBox>
+        <_LabelL>Departamento</_LabelL>
+        <_InputBox>{data.departamento}</_InputBox>
+        <_LabelL>Póliza</_LabelL>
+        <_InputBox>{data.poliza}</_InputBox>
+        <_LabelL>Dirección</_LabelL>
+        <_InputBox>{data.direccion}</_InputBox>
+        <_LabelL>Descripción</_LabelL>
+        <_InputBox>{data.descripcion}</_InputBox>
       </div>
 
       <div style={{ marginTop: 14 }}>
-        <SectionBar>Datos del Ejecutivo</SectionBar>
+        <_SectionBar>Datos del Ejecutivo</_SectionBar>
       </div>
 
       <div
@@ -427,14 +533,14 @@ export function FormSheet({ variant, data }: { variant: "ap" | "cg"; data: FormR
         <div
           style={{ display: "grid", gridTemplateColumns: "170px 1fr", columnGap: 10, rowGap: 6 }}
         >
-          <LabelL>Nombre</LabelL>
-          <InputBox>{data.ejecutivo_nombre}</InputBox>
-          <LabelL>Celular</LabelL>
-          <InputBox>{data.ejecutivo_celular}</InputBox>
-          <LabelL>Intentos de llamada</LabelL>
-          <InputBox>{data.intentos_llamada}</InputBox>
-          <LabelL>Observaciones</LabelL>
-          <InputBox tall>{data.observaciones}</InputBox>
+          <_LabelL>Nombre</_LabelL>
+          <_InputBox>{data.ejecutivo_nombre}</_InputBox>
+          <_LabelL>Celular</_LabelL>
+          <_InputBox>{data.ejecutivo_celular}</_InputBox>
+          <_LabelL>Intentos de llamada</_LabelL>
+          <_InputBox>{data.intentos_llamada}</_InputBox>
+          <_LabelL>Observaciones</_LabelL>
+          <_InputBox tall>{data.observaciones}</_InputBox>
         </div>
         <div
           style={{
@@ -444,137 +550,11 @@ export function FormSheet({ variant, data }: { variant: "ap" | "cg"; data: FormR
             alignSelf: "start",
           }}
         >
-          <LabelR>Hubo tripartita</LabelR>
-          <Val>{data.hubo_tripartita || "—"}</Val>
-          <LabelR>Hora de contacto</LabelR>
-          <Val>{data.hora_contacto || "—"}</Val>
+          <_LabelR>Hubo tripartita</_LabelR>
+          <_Val>{data.hubo_tripartita || "—"}</_Val>
+          <_LabelR>Hora de contacto</_LabelR>
+          <_Val>{data.hora_contacto || "—"}</_Val>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function SectionBar({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        color: "#ffffff",
-        fontSize: 13,
-        fontWeight: 600,
-        padding: "6px 10px",
-        borderRadius: 2,
-        background: BAR,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-function LabelL({ children }: { children: React.ReactNode }) {
-  return <div style={{ fontWeight: 600, lineHeight: "24px", color: BRAND }}>{children}</div>;
-}
-function LabelR({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        fontWeight: 600,
-        textAlign: "right",
-        paddingRight: 10,
-        lineHeight: "24px",
-        color: BRAND,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-function Val({ children }: { children: React.ReactNode }) {
-  return <div style={{ color: "#0f172a", lineHeight: "24px" }}>{children}</div>;
-}
-function InputBox({ children, tall }: { children: React.ReactNode; tall?: boolean }) {
-  const v = children === null || children === undefined || children === "" ? "" : String(children);
-  return (
-    <div
-      style={{
-        border: "1px solid #94a3b8",
-        background: "#ffffff",
-        padding: "4px 10px",
-        color: "#0f172a",
-        wordBreak: "break-word",
-        whiteSpace: "pre-wrap",
-        minHeight: tall ? 56 : 24,
-        fontSize: 13,
-      }}
-    >
-      {v}
-    </div>
-  );
-}
-function fmtDate(s?: string | null) {
-  if (!s) return "—";
-  const d = new Date(s);
-  if (isNaN(d.getTime())) return s;
-  return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
-}
-
-/* ---------- Legacy generic sheet ---------- */
-
-function GenericSheet({
-  title,
-  subtitle,
-  nro,
-  sections,
-}: {
-  title: string;
-  subtitle?: string;
-  nro: number | string;
-  sections: ReportSection[];
-}) {
-  return (
-    <div className="p-5 h-full flex flex-col">
-      <div
-        className="flex items-start justify-between border-b-2 pb-2 mb-3"
-        style={{ borderColor: BRAND }}
-      >
-        <div>
-          <div
-            className="text-[10px] font-semibold tracking-widest uppercase"
-            style={{ color: BRAND }}
-          >
-            DOKKA Desk
-          </div>
-          <h2 className="text-xl font-bold leading-tight">{title}</h2>
-          {subtitle && <div className="text-[11px] text-slate-500 mt-0.5">{subtitle}</div>}
-        </div>
-        <div className="text-right">
-          <div className="text-[10px] uppercase tracking-wider text-slate-500">Reporte N°</div>
-          <div className="text-2xl font-bold leading-none" style={{ color: BRAND }}>
-            {nro}
-          </div>
-        </div>
-      </div>
-      <div className="flex-1 grid grid-cols-2 gap-2 content-start">
-        {sections.map((s, i) => (
-          <div key={i} className="border border-slate-300 rounded-sm overflow-hidden">
-            <div className="bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-300">
-              {s.title}
-            </div>
-            <div className="grid grid-cols-2 gap-x-2 gap-y-1 p-2">
-              {s.fields.map((f, j) => (
-                <div key={j} className={f.full ? "col-span-2" : ""}>
-                  <div className="text-[9px] uppercase tracking-wide text-slate-500 font-semibold leading-tight">
-                    {f.label}
-                  </div>
-                  <div className="text-[11px] text-slate-900 break-words whitespace-pre-wrap leading-snug">
-                    {f.value === null || f.value === undefined || f.value === ""
-                      ? "—"
-                      : String(f.value)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
       </div>
     </div>
   );

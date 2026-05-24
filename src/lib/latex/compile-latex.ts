@@ -1,16 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
-import { execSync } from "node:child_process";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
+import { z } from "zod";
 
-interface ReportData {
-  variant: "ap" | "cg" | "generic";
-  nro: number | string;
-  title?: string;
-  subtitle?: string;
-  fields: Record<string, string | null | undefined>;
-}
+const ReportInput = z.object({
+  variant: z.enum(["ap", "cg", "generic"]),
+  nro: z.union([z.string(), z.number()]),
+  title: z.string().optional(),
+  subtitle: z.string().optional(),
+  fields: z.record(z.string(), z.string().nullable().optional()),
+});
 
 function replaceTex(src: string, data: Record<string, string | null | undefined>): string {
   let out = src;
@@ -22,8 +19,13 @@ function replaceTex(src: string, data: Record<string, string | null | undefined>
 }
 
 export const compileReportPDF = createServerFn({ method: "POST" })
-  .validator((d: ReportData) => d)
+  .inputValidator((input) => ReportInput.parse(input))
   .handler(async ({ data }) => {
+    const { existsSync, mkdtempSync, readFileSync, writeFileSync, rmSync } = await import("node:fs");
+    const { execSync } = await import("node:child_process");
+    const { join } = await import("node:path");
+    const { tmpdir } = await import("node:os");
+
     const { variant, fields } = data;
 
     const texPath = join(__dirname, "templates", `form-${variant === "generic" ? "generic" : variant}.tex`);
@@ -54,8 +56,13 @@ export const compileReportPDF = createServerFn({ method: "POST" })
   });
 
 export const compileReportPNG = createServerFn({ method: "POST" })
-  .validator((d: ReportData) => d)
+  .inputValidator((input) => ReportInput.parse(input))
   .handler(async ({ data }) => {
+    const { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } = await import("node:fs");
+    const { execSync } = await import("node:child_process");
+    const { join } = await import("node:path");
+    const { tmpdir } = await import("node:os");
+
     const pdf = await compileReportPDF({ data });
     const dir = mkdtempSync(join(tmpdir(), "latex-"));
     try {

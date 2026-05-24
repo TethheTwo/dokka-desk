@@ -1,10 +1,10 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Copy, Mail, X, Check, ArrowLeft } from "lucide-react";
-import { domToCanvas } from "modern-screenshot";
 import { toast } from "sonner";
 import { useMasterList } from "@/lib/master-lists";
-import { FormSheet, type FormReportData } from "@/components/ReportPreviewModal";
+import type { FormReportData } from "@/components/ReportPreviewModal";
 import { formatCode } from "@/lib/utils";
+import { compileReportPNG } from "@/lib/latex/compile-latex";
 
 interface Props {
   open: boolean;
@@ -14,7 +14,6 @@ interface Props {
 }
 
 const CC_FIXED = "nacionalseguros@conecta.com.bo";
-const FOOTER_H = 40;
 
 function fmtTime(iso?: string | null) {
   if (!iso) return "";
@@ -25,12 +24,42 @@ function fmtTime(iso?: string | null) {
   return `${hh}:${mm}`;
 }
 
+function buildFormFields(data: FormReportData, variant: "ap" | "cg", footer: string) {
+  return {
+    FECHA_SOLICITUD: data.fecha_solicitud ? fmtDate(data.fecha_solicitud) : "—",
+    FECHA_SINIESTRO: data.fecha_siniestro ? fmtDate(data.fecha_siniestro) : "—",
+    ACCIDENTADO: variant === "ap" ? data.nombre_accidentado : null,
+    CARNET: variant === "ap" ? data.carnet_accidentado : null,
+    ASEGURADO: variant === "cg" ? data.asegurado : null,
+    DANOS: variant === "cg" ? data.danos_personales : null,
+    SOLICITANTE: data.solicitante,
+    CELULAR: data.celular,
+    DEPARTAMENTO: data.departamento,
+    POLIZA: data.poliza,
+    DIRECCION: data.direccion,
+    DESCRIPCION: data.descripcion,
+    EJECUTIVO: data.ejecutivo_nombre,
+    EJ_CEL: data.ejecutivo_celular,
+    INTENTOS: data.intentos_llamada,
+    OBS: data.observaciones,
+    TRI: data.hubo_tripartita,
+    HORA: data.hora_contacto,
+    FOOTER: footer,
+  };
+}
+
+function fmtDate(s?: string | null) {
+  if (!s) return "—";
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+}
+
 export function ShareReportModal({ open, onClose, variant, data }: Props) {
   const correos = useMasterList("correos");
   const [copied, setCopied] = useState(false);
   const [emailPicker, setEmailPicker] = useState(false);
   const [sharing, setSharing] = useState(false);
-  const captureRef = useRef<HTMLDivElement>(null);
 
   const code = formatCode(variant === "ap" ? "AP" : "CG", (data as any).nro);
 
@@ -66,17 +95,18 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
   };
 
   const captureReport = async (): Promise<Blob> => {
-    const node = captureRef.current;
-    if (!node) throw new Error("no node");
-    const canvas = await domToCanvas(node, {
-      scale: 2,
-      backgroundColor: "#ffffff",
-      width: 900,
-      height: 720 + FOOTER_H,
+    const footer = `Reporte ${code}${ejecutivo ? " · " + ejecutivo : ""} · ${link}`;
+    const r = await compileReportPNG({
+      data: {
+        variant,
+        nro: data.nro,
+        title: "",
+        subtitle: "",
+        fields: buildFormFields(data, variant, footer),
+      },
     });
-    return await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("no blob"))), "image/png");
-    });
+    const bytes = Uint8Array.from(atob(r.png), (c) => c.charCodeAt(0));
+    return new Blob([bytes], { type: "image/png" });
   };
 
   const shareWhatsApp = async () => {
@@ -87,16 +117,14 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
       const file = new File([blob], `reporte-${code}.png`, { type: "image/png" });
       const nav = navigator as any;
       const shortText = `Reporte ${code}${ejecutivo ? " · " + ejecutivo : ""}`;
-      // Intentar share nativo con archivo (móvil + algunos navegadores desktop)
       if (nav.share && typeof nav.canShare === "function" && nav.canShare({ files: [file] })) {
         try {
           await nav.share({ files: [file], text: shortText, title: "Reporte" });
           return;
         } catch {
-          /* el usuario canceló o el navegador no permitió */
+          /* usuario canceló */
         }
       }
-      // Fallback: descargar imagen + abrir WhatsApp Web con instrucciones
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -124,7 +152,6 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
         ? `F-805 Atención de Casos Generales/${data.asegurado ?? ""}/${data.departamento ?? ""}/${ejecutivo}`
         : `F-775 Atención de Accidentes Personales NSPF/${data.nombre_accidentado ?? ""}/${data.departamento ?? ""}/${ejecutivo}`;
 
-    // ====== Versión texto plano estructurada (para mailto) ======
     const sep = "────────────────────────────";
     const introTxt =
       variant === "cg"
@@ -177,7 +204,6 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
       `Link del reporte: ${link}`,
     ].join("\n");
 
-    // ====== Versión HTML (para Outlook Web / Gmail deeplinks) ======
     const sectionStyle =
       "margin:18px 0 6px;font-size:14px;font-weight:700;letter-spacing:.04em;color:#0f172a;text-transform:uppercase;";
     const hrStyle = "border:none;border-top:1px solid #cbd5e1;margin:0 0 10px;";
@@ -267,54 +293,6 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      {/* Nodo oculto para capturar la imagen del reporte */}
-      <div
-        ref={captureRef}
-        aria-hidden
-        style={{
-          position: "fixed",
-          left: "-10000px",
-          top: 0,
-          width: 900,
-          height: 720 + FOOTER_H,
-          background: "#fff",
-        }}
-      >
-        <div style={{ width: 900, height: 720 }}>
-          <FormSheet variant={variant} data={data} />
-        </div>
-        <div
-          style={{
-            width: 900,
-            height: FOOTER_H,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            borderTop: "1px solid #cbd5e1",
-            padding: "0 16px",
-            fontSize: 11,
-            color: "#64748b",
-            fontFamily: "Arial, sans-serif",
-            boxSizing: "border-box",
-          }}
-        >
-          <span>Reporte {code}</span>
-          {ejecutivo && <span>{ejecutivo}</span>}
-          <span
-            style={{
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              maxWidth: 300,
-              direction: "rtl",
-              textAlign: "right",
-            }}
-          >
-            {link}
-          </span>
-        </div>
-      </div>
-
       <div
         className="bg-background rounded-2xl shadow-2xl border border-border w-full max-w-md animate-in zoom-in-95 fade-in-0 duration-200"
         onMouseDown={(e) => e.stopPropagation()}
