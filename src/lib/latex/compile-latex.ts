@@ -193,79 +193,83 @@ function getTemplate(variant: string): string {
   return TEMPLATE_GENERIC;
 }
 
+async function compilePDF(data: { variant: string; nro: string | number; fields: Record<string, string | null | undefined> }): Promise<{ pdf: string }> {
+  const { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } = await import("node:fs");
+  const { execSync } = await import("node:child_process");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+
+  const { variant, fields } = data;
+  let template = getTemplate(variant);
+  template = replaceTex(template, fields);
+
+  const dir = mkdtempSync(join(tmpdir(), "latex-"));
+  try {
+    const texFile = join(dir, "report.tex");
+    writeFileSync(texFile, template, "utf-8");
+
+    execSync("pdflatex -interaction=nonstopmode -halt-on-error report.tex", {
+      cwd: dir, stdio: "pipe", timeout: 30000,
+    });
+
+    try {
+      execSync("pdflatex -interaction=nonstopmode -halt-on-error report.tex", {
+        cwd: dir, stdio: "pipe", timeout: 30000,
+      });
+    } catch {}
+
+    const pdfPath = join(dir, "report.pdf");
+    if (!existsSync(pdfPath)) throw new Error("PDF not generated");
+
+    const pdfBuffer = readFileSync(pdfPath);
+    return { pdf: pdfBuffer.toString("base64") };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+async function compilePNG(pdfData: { pdf: string }): Promise<{ png: string }> {
+  const { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } = await import("node:fs");
+  const { execSync } = await import("node:child_process");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+
+  const dir = mkdtempSync(join(tmpdir(), "latex-"));
+  try {
+    const pdfPath = join(dir, "report.pdf");
+    writeFileSync(pdfPath, Buffer.from(pdfData.pdf, "base64"));
+
+    execSync("pdftoppm -png -r 150 report.pdf report", {
+      cwd: dir, stdio: "pipe", timeout: 30000,
+    });
+
+    const pngPath = join(dir, "report-1.png");
+    if (!existsSync(pngPath)) throw new Error("PNG not generated");
+
+    const pngBuffer = readFileSync(pngPath);
+    return { png: pngBuffer.toString("base64") };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 export const compileReportPDF = createServerFn({ method: "POST" })
   .inputValidator((input) => ReportInput.parse(input))
   .handler(async ({ data }) => {
     try {
-      const { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } = await import("node:fs");
-      const { execSync } = await import("node:child_process");
-      const { join } = await import("node:path");
-      const { tmpdir } = await import("node:os");
-
-      const { variant, fields } = data;
-      let template = getTemplate(variant);
-      template = replaceTex(template, fields);
-
-      const dir = mkdtempSync(join(tmpdir(), "latex-"));
-      try {
-        const texFile = join(dir, "report.tex");
-        writeFileSync(texFile, template, "utf-8");
-
-        execSync("pdflatex -interaction=nonstopmode -halt-on-error report.tex", {
-          cwd: dir,
-          stdio: "pipe",
-          timeout: 30000,
-        });
-
-        // Second run for cross-references
-        try {
-          execSync("pdflatex -interaction=nonstopmode -halt-on-error report.tex", {
-            cwd: dir,
-            stdio: "pipe",
-            timeout: 30000,
-          });
-        } catch {}
-
-        const pdfPath = join(dir, "report.pdf");
-        if (!existsSync(pdfPath)) throw new Error("PDF not generated");
-
-        const pdfBuffer = readFileSync(pdfPath);
-        return { pdf: pdfBuffer.toString("base64"), mime: "application/pdf" };
-      } finally {
-        rmSync(dir, { recursive: true, force: true });
-      }
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      throw new Error(msg.slice(0, 500));
+      return await compilePDF(data);
+    } catch (e) {
+      throw new Error(e instanceof Error ? e.message.slice(0, 200) : String(e).slice(0, 200));
     }
   });
 
 export const compileReportPNG = createServerFn({ method: "POST" })
   .inputValidator((input) => ReportInput.parse(input))
   .handler(async ({ data }) => {
-    const { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } = await import("node:fs");
-    const { execSync } = await import("node:child_process");
-    const { join } = await import("node:path");
-    const { tmpdir } = await import("node:os");
-
-    const pdf = await compileReportPDF({ data });
-    const dir = mkdtempSync(join(tmpdir(), "latex-"));
     try {
-      const pdfPath = join(dir, "report.pdf");
-      writeFileSync(pdfPath, Buffer.from(pdf.pdf, "base64"));
-
-      execSync("pdftoppm -png -r 150 report.pdf report", {
-        cwd: dir,
-        stdio: "pipe",
-        timeout: 30000,
-      });
-
-      const pngPath = join(dir, "report-1.png");
-      if (!existsSync(pngPath)) throw new Error("PNG not generated");
-
-      const pngBuffer = readFileSync(pngPath);
-      return { png: pngBuffer.toString("base64"), mime: "image/png" };
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
+      const pdf = await compilePDF(data);
+      return await compilePNG(pdf);
+    } catch (e) {
+      throw new Error(e instanceof Error ? e.message.slice(0, 200) : String(e).slice(0, 200));
     }
   });
