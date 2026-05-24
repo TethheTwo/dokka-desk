@@ -3,7 +3,6 @@ import { Camera, FileText, X, Image as ImageIcon } from "lucide-react";
 import { domToCanvas } from "modern-screenshot";
 import { jsPDF } from "jspdf";
 import { toast } from "sonner";
-import { padToA4 } from "@/lib/utils";
 import { formatCode } from "@/lib/utils";
 
 export interface ReportField {
@@ -50,9 +49,9 @@ interface Props {
   data?: FormReportData;
 }
 
-// Sheet: enlarged for legibility
-const SHEET_W = 900;
-const SHEET_H = 720;
+// Sheet: A4 portrait (595 × 842 px at 72 DPI)
+const SHEET_W = 595;
+const SHEET_H = 842;
 const BRAND = "#2f7fd6";
 const BAR = "#5a8fc4";
 
@@ -106,11 +105,11 @@ export function ReportPreviewModal({
       backgroundColor: "#ffffff",
       width: SHEET_W,
       height: SHEET_H,
-      scale: 1,
+      scale: 2,
     });
     node.style.transform = savedTransform;
-    cachedCanvasRef.current = padToA4(canvas);
-    return cachedCanvasRef.current;
+    cachedCanvasRef.current = canvas;
+    return canvas;
   };
 
   const fileBase = () => {
