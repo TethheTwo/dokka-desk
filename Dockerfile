@@ -14,7 +14,7 @@ RUN bun run build
 
 # Final image
 FROM base AS release
-RUN apt-get update && apt-get install -y curl texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-lang-spanish poppler-utils fonts-liberation && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y curl texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-lang-spanish texlive-xetex poppler-utils fonts-liberation && rm -rf /var/lib/apt/lists/*
 COPY --from=install /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/package.json ./package.json
