@@ -1,0 +1,200 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Design system definition.
+ *
+ * The @theme inline block maps CSS custom properties to Tailwind utility
+ * classes (e.g. --color-primary -> bg-primary, text-primary).
+ *
+ * The :root and .dark blocks define the actual color values.
+ *
+ * To add a new semantic color:
+ * 1. Add the variable to :root (light value) and .dark (dark value)
+ * 2. Register it in @theme inline as --color-<name>: var(--<name>)
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: #ffffff;
+  --foreground: #020618;
+  --card: #ffffff;
+  --card-foreground: #020618;
+  --popover: #ffffff;
+  --popover-foreground: #020618;
+  --primary: #0f172b;
+  --primary-foreground: #f8fafc;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172b;
+  --muted: #f1f5f9;
+  --muted-foreground: #62748e;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172b;
+  --destructive: #e7000b;
+  --destructive-foreground: #f8fafc;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #90a1b9;
+  --chart-1: #f54900;
+  --chart-2: #009689;
+  --chart-3: #104e64;
+  --chart-4: #ffb900;
+  --chart-5: #fe9a00;
+  --sidebar: #f8fafc;
+  --sidebar-foreground: #020618;
+  --sidebar-primary: #0f172b;
+  --sidebar-primary-foreground: #f8fafc;
+  --sidebar-accent: #f1f5f9;
+  --sidebar-accent-foreground: #0f172b;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #90a1b9;
+}
+
+.dark {
+  --background: #020618;
+  --foreground: #f8fafc;
+  --card: #0f172b;
+  --card-foreground: #f8fafc;
+  --popover: #0f172b;
+  --popover-foreground: #f8fafc;
+  --primary: #e2e8f0;
+  --primary-foreground: #0f172b;
+  --secondary: #1d293d;
+  --secondary-foreground: #f8fafc;
+  --muted: #1d293d;
+  --muted-foreground: #90a1b9;
+  --accent: #1d293d;
+  --accent-foreground: #f8fafc;
+  --destructive: #ff6467;
+  --destructive-foreground: #f8fafc;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #6a7282;
+  --chart-1: #1447e6;
+  --chart-2: #00bc7d;
+  --chart-3: #fe9a00;
+  --chart-4: #ad46ff;
+  --chart-5: #ff2056;
+  --sidebar: #0f172b;
+  --sidebar-foreground: #f8fafc;
+  --sidebar-primary: #1447e6;
+  --sidebar-primary-foreground: #f8fafc;
+  --sidebar-accent: #1d293d;
+  --sidebar-accent-foreground: #f8fafc;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #6a7282;
+}
+
+:root {
+  --app-bg: #f3f5f8;
+  --brand-blue: #1d84f5;
+  --brand-blue-hover: #006de2;
+  --brand-teal: #009c9c;
+  --brand-accent: #93cc4b;
+  --btn-gray: #6d7277;
+  --btn-gray-hover: #595e63;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family:
+      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  .form-input {
+    width: 100%;
+    border-radius: 0.25rem;
+    border: 1px solid var(--color-border);
+    background-color: var(--color-background);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--color-foreground);
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
+  }
+
+  .form-input::placeholder {
+    color: #95a0ab;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: var(--brand-blue);
+    box-shadow: 0 0 0 3px rgba(29, 132, 245, 0.2);
+  }
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href],
+  summary,
+  label[for],
+  select:not(:disabled),
+  [role="menuitem"],
+  [role="option"],
+  [role="tab"],
+  [role="switch"],
+  [role="checkbox"],
+  [role="radio"] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}

@@ -1,0 +1,102 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: dokka-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    env_file: .env
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required — run ./init.sh first}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=trust"
+    volumes:
+      - ./supabase/migrations:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # Kong as API Gateway
+  kong:
+    image: kong:3.4
+    container_name: dokka-kong
+    restart: unless-stopped
+    ports:
+      - "8000:8000" # API
+      - "8443:8443" # API SSL
+      - "8001:8001" # Admin
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /opt/kong/kong.yml
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+    volumes:
+      - ./docker/kong.yml:/opt/kong/kong.yml
+
+  # Supabase Auth (GoTrue)
+  auth:
+    image: supabase/gotrue:v2.132.3
+    container_name: dokka-auth
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: http://localhost:8000/auth/v1
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_DB_DRIVER: postgres
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?}@db:5432/postgres?sslmode=disable&options=-csearch_path=auth
+      GOTRUE_JWT_SECRET: ${JWT_SECRET:?}
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: "authenticated"
+      GOTRUE_SITE_URL: ${SITE_URL:-http://localhost:3000}
+      GOTRUE_URI_ALLOW_LIST: ${SITE_URL:-http://localhost:3000}/*
+
+  # PostgREST
+  rest:
+    image: postgrest/postgrest:v11.2.0
+    container_name: dokka-rest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      PGRST_DB_URI: postgres://postgres:${POSTGRES_PASSWORD:?}@db:5432/postgres
+      PGRST_DB_SCHEMA: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET:?}
+
+  # The Web App
+  app:
+    build: .
+    container_name: dokka-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./uploads:/app/uploads
+    env_file: .env
+    environment:
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      SUPABASE_URL: http://localhost:3000
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-http://localhost:8000}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY:-${SUPABASE_PUBLISHABLE_KEY}}
+    depends_on:
+      - kong
+      - auth
+      - rest
+
+volumes:
+  postgres_data:
