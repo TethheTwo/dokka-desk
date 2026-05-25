@@ -45,3 +45,6 @@ package-lock.json
 seed_datos.sql
 seed_reportes.sql
 seed_dummy_data.sql
+
+# Python cache
+__pycache__/
