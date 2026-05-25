@@ -1,8 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Camera, FileText, X, Image as ImageIcon } from "lucide-react";
 import { domToCanvas } from "modern-screenshot";
+import { pdf } from "@react-pdf/renderer";
 import { toast } from "sonner";
 import { formatCode } from "@/lib/utils";
+import { ModernFormSheet, type FormReportData } from "./ModernFormSheet";
+import { ModernFormSheetPDF } from "./ModernFormSheetPDF";
 
 export interface ReportField {
   label: string;
@@ -12,29 +15,6 @@ export interface ReportField {
 export interface ReportSection {
   title: string;
   fields: ReportField[];
-}
-
-export interface FormReportData {
-  nro: number | string;
-  colaborador?: string | null;
-  fecha_solicitud?: string | null;
-  fecha_siniestro?: string | null;
-  danos_personales?: string | null;
-  asegurado?: string | null;
-  nombre_accidentado?: string | null;
-  carnet_accidentado?: string | null;
-  solicitante?: string | null;
-  celular?: string | null;
-  departamento?: string | null;
-  poliza?: string | null;
-  direccion?: string | null;
-  descripcion?: string | null;
-  ejecutivo_nombre?: string | null;
-  ejecutivo_celular?: string | null;
-  intentos_llamada?: string | null;
-  observaciones?: string | null;
-  hubo_tripartita?: string | null;
-  hora_contacto?: string | null;
 }
 
 interface Props {
@@ -50,8 +30,6 @@ interface Props {
 
 const SHEET_W = 595;
 const SHEET_H = 842;
-const BRAND = "#2f7fd6";
-const BAR = "#5a8fc4";
 
 export function ReportPreviewModal({
   open,
@@ -148,25 +126,22 @@ export function ReportPreviewModal({
   };
 
   const downloadPDF = async () => {
+    if (!variant || !data) {
+      toast.error("No hay datos para generar el PDF");
+      return;
+    }
     try {
       setBusy("pdf");
-      const c = await renderCanvas();
-      const img = c.toDataURL("image/png");
-      const pdf = new (await import("jspdf")).jsPDF({
-        unit: "pt",
-        format: "a4",
-        orientation: "portrait",
-      });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const margin = 20;
-      const targetW = pageW - margin * 2;
-      const targetH = pageH - margin * 2;
-      const ratio = Math.min(targetW / c.width, targetH / c.height);
-      const w = c.width * ratio;
-      const h = c.height * ratio;
-      pdf.addImage(img, "PNG", (pageW - w) / 2, (pageH - h) / 2, w, h);
-      pdf.save(`${fileBase()}.pdf`);
+      const blob = await pdf(
+        <ModernFormSheetPDF variant={variant} data={data} />,
+      ).toBlob();
+      if (!blob) throw new Error("no blob");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${fileBase()}.pdf`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
       toast.success("PDF descargado");
     } catch (e) {
       console.error(e);
@@ -290,18 +265,16 @@ export function ReportPreviewModal({
                   color: "#0f172a",
                 }}
               >
-                <div style={{ width: "100%", height: "100%" }}>
-                  {variant && data ? (
-                    <FormSheet variant={variant} data={data} />
-                  ) : (
-                    <GenericSheet
-                      title={title}
-                      subtitle={subtitle}
-                      nro={nro}
-                      sections={sections ?? []}
-                    />
-                  )}
-                </div>
+                {variant && data ? (
+                  <ModernFormSheet variant={variant} data={data} />
+                ) : (
+                  <GenericSheet
+                    title={title}
+                    subtitle={subtitle}
+                    nro={nro}
+                    sections={sections ?? []}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -311,220 +284,7 @@ export function ReportPreviewModal({
   );
 }
 
-/* ---------- Form sheet React components ---------- */
-
-export function FormSheet({ variant, data }: { variant: "ap" | "cg"; data: FormReportData }) {
-  const code = variant === "ap" ? "F-775" : "F-805";
-  const heading =
-    variant === "ap"
-      ? `FORMULARIO PARA ACCIDENTES PERSONALES PATRIMONIALES   ${code}`
-      : `FORMULARIO PARA CASOS GENERALES   ${code}`;
-
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        padding: "18px 28px",
-        display: "flex",
-        flexDirection: "column",
-        fontFamily: "Arial, Helvetica, sans-serif",
-        color: "#0f172a",
-        background: "#ffffff",
-        fontSize: 11,
-      }}
-    >
-      <div
-        style={{
-          textAlign: "center",
-          fontSize: 13,
-          fontWeight: 700,
-          color: "#0f172a",
-          marginBottom: 10,
-        }}
-      >
-        {heading}
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "140px 1fr",
-          rowGap: 3,
-          fontSize: 11,
-          marginBottom: 8,
-        }}
-      >
-        <div style={{ fontWeight: 600, color: BRAND }}>N° de Registro</div>
-        <div style={{ color: "#0f172a", fontWeight: 600 }}>{data.nro ?? "—"}</div>
-        <div style={{ fontWeight: 600, color: BRAND }}>Colaborador</div>
-        <div style={{ color: "#0f172a" }}>{data.colaborador || "—"}</div>
-      </div>
-
-      <SectionBar>Datos del Siniestro</SectionBar>
-
-      <div
-        style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 12, marginTop: 8 }}
-      >
-        <div />
-        <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", rowGap: 3, fontSize: 13 }}>
-          <LabelR>Fecha de solicitud</LabelR>
-          <Val>{fmtDate(data.fecha_solicitud)}</Val>
-          <LabelR>Fecha del siniestro</LabelR>
-          <Val>{fmtDate(data.fecha_siniestro)}</Val>
-          {variant === "cg" && (
-            <>
-              <LabelR>Daños Personales</LabelR>
-              <Val>{data.danos_personales || "—"}</Val>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "170px 1fr",
-          columnGap: 8,
-          rowGap: 4,
-          fontSize: 11,
-          marginTop: 8,
-        }}
-      >
-        {variant === "ap" ? (
-          <>
-            <LabelL>Nombre del Accidentado</LabelL>
-            <InputBox>{data.nombre_accidentado}</InputBox>
-            <LabelL>Carnet del Accidentado</LabelL>
-            <InputBox>{data.carnet_accidentado}</InputBox>
-          </>
-        ) : (
-          <>
-            <LabelL>Asegurado</LabelL>
-            <InputBox>{data.asegurado}</InputBox>
-          </>
-        )}
-        <LabelL>Solicitante</LabelL>
-        <InputBox>{data.solicitante}</InputBox>
-        <LabelL>Celular</LabelL>
-        <InputBox>{data.celular}</InputBox>
-        <LabelL>Departamento</LabelL>
-        <InputBox>{data.departamento}</InputBox>
-        <LabelL>Póliza</LabelL>
-        <InputBox>{data.poliza}</InputBox>
-        <LabelL>Dirección</LabelL>
-        <InputBox>{data.direccion}</InputBox>
-        <LabelL>Descripción</LabelL>
-        <InputBox>{data.descripcion}</InputBox>
-      </div>
-
-      <div style={{ marginTop: 10 }}>
-        <SectionBar>Datos del Ejecutivo</SectionBar>
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          columnGap: 16,
-          marginTop: 8,
-          fontSize: 11,
-        }}
-      >
-        <div
-          style={{ display: "grid", gridTemplateColumns: "110px 1fr", columnGap: 8, rowGap: 5 }}
-        >
-          <LabelL>Nombre</LabelL>
-          <InputBox>{data.ejecutivo_nombre}</InputBox>
-          <LabelL>Celular</LabelL>
-          <InputBox>{data.ejecutivo_celular}</InputBox>
-          <LabelL>Intentos de llamada</LabelL>
-          <InputBox>{data.intentos_llamada}</InputBox>
-          <LabelL>Observaciones</LabelL>
-          <InputBox tall>{data.observaciones}</InputBox>
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "100px 1fr",
-            rowGap: 5,
-            alignSelf: "start",
-          }}
-        >
-          <LabelR>Hubo tripartita</LabelR>
-          <Val>{data.hubo_tripartita || "—"}</Val>
-          <LabelR>Hora de contacto</LabelR>
-          <Val>{data.hora_contacto || "—"}</Val>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SectionBar({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        color: "#ffffff",
-        fontSize: 11,
-        fontWeight: 600,
-        padding: "4px 10px",
-        borderRadius: 2,
-        background: BAR,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-function LabelL({ children }: { children: React.ReactNode }) {
-  return <div style={{ fontWeight: 600, lineHeight: "20px", color: BRAND }}>{children}</div>;
-}
-function LabelR({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        fontWeight: 600,
-        textAlign: "right",
-        paddingRight: 8,
-        lineHeight: "20px",
-        color: BRAND,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-function Val({ children }: { children: React.ReactNode }) {
-  return <div style={{ color: "#0f172a", lineHeight: "20px" }}>{children}</div>;
-}
-function InputBox({ children, tall }: { children: React.ReactNode; tall?: boolean }) {
-  const v = children === null || children === undefined || children === "" ? "" : String(children);
-  return (
-    <div
-      style={{
-        border: "1px solid #94a3b8",
-        background: "#ffffff",
-        padding: "3px 8px",
-        color: "#0f172a",
-        wordBreak: "break-word",
-        whiteSpace: "pre-wrap",
-        minHeight: tall ? 40 : 20,
-        fontSize: 11,
-      }}
-    >
-      {v}
-    </div>
-  );
-}
-function fmtDate(s?: string | null) {
-  if (!s) return "—";
-  const d = new Date(s);
-  if (isNaN(d.getTime())) return s;
-  return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
-}
-
-/* ---------- Generic sheet ---------- */
+/* ---------- Generic sheet (fallback) ---------- */
 
 function GenericSheet({
   title,
@@ -541,13 +301,10 @@ function GenericSheet({
     <div className="p-5 h-full flex flex-col" style={{ fontFamily: "Arial, Helvetica, sans-serif" }}>
       <div
         className="flex items-start justify-between border-b-2 pb-2 mb-3"
-        style={{ borderColor: BRAND }}
+        style={{ borderColor: "#2f7fd6" }}
       >
         <div>
-          <div
-            className="text-[10px] font-semibold tracking-widest uppercase"
-            style={{ color: BRAND }}
-          >
+          <div className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: "#2f7fd6" }}>
             DOKKA Desk
           </div>
           <h2 className="text-xl font-bold leading-tight">{title}</h2>
@@ -555,7 +312,7 @@ function GenericSheet({
         </div>
         <div className="text-right">
           <div className="text-[10px] uppercase tracking-wider text-slate-500">Reporte N°</div>
-          <div className="text-2xl font-bold leading-none" style={{ color: BRAND }}>
+          <div className="text-2xl font-bold leading-none" style={{ color: "#2f7fd6" }}>
             {nro}
           </div>
         </div>
