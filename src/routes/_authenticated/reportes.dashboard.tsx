@@ -36,7 +36,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { getTickets, subscribeTickets, type Ticket } from "@/lib/tickets-store";
-import { exportTicketsPDF, exportTicketsXLSX } from "@/lib/report-exports";
+import { exportTicketsPDF, exportDashboardXLSX } from "@/lib/report-exports";
 import { DownloadMenu } from "@/components/DownloadMenu";
 import { useAuth } from "@/lib/auth";
 import { useCurrentUser } from "@/lib/user-store";
@@ -196,7 +196,7 @@ function DashboardReportes() {
             <DownloadMenu
               hidden={!canDownload}
               onPDF={(r) => exportTicketsPDF(filtered, r, currentUser.name || "Usuario")}
-              onExcel={(r) => exportTicketsXLSX(filtered, r, currentUser.name || "Usuario")}
+              onExcel={(r) => exportDashboardXLSX(filtered, r, currentUser.name || "Usuario")}
             />
           </>
         }
