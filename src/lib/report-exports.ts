@@ -366,7 +366,7 @@ export async function exportDashboardXLSX(tickets: Ticket[], range: DateRange, u
         title: "Resumen de Tickets — DOKKA Desk",
         metadata: meta1,
         metadata2: meta2,
-        col_widths: [25, 25],
+        col_widths: [46, 46],
         blocks,
       },
     ],
