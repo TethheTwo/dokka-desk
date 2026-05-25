@@ -3,7 +3,7 @@ import { Copy, Mail, X, Check, ArrowLeft } from "lucide-react";
 import { domToCanvas } from "modern-screenshot";
 import { toast } from "sonner";
 import { useMasterList } from "@/lib/master-lists";
-import { FormSheet, type FormReportData } from "@/components/ReportPreviewModal";
+import { ModernFormSheet, type FormReportData } from "@/components/ModernFormSheet";
 import { formatCode } from "@/lib/utils";
 
 interface Props {
@@ -276,7 +276,7 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
         }}
       >
         <div style={{ width: 595, height: 842 }}>
-          <FormSheet variant={variant} data={data} />
+          <ModernFormSheet variant={variant} data={data} />
         </div>
       </div>
 
