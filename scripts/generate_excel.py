@@ -106,10 +106,8 @@ def build_sheet(ws, sheet_def: dict, styles: dict):
         current_row += 1
 
     if blocks:
-        # Compute num_cols for merging title/meta
-        max_cols = 4
-        col_w_count = len(col_widths) if col_widths else 4
-        max_cols = max(max_cols, col_w_count)
+        # Compute num_cols for merging title/meta and sections
+        max_cols = len(col_widths) if col_widths else 0
         for b in blocks:
             if b.get("type") == "table":
                 hdrs = b.get("headers", [])
@@ -262,7 +260,7 @@ def build_charts(wb, chart_defs: list, sheets_map: dict):
             continue
 
         chart.title = title
-        chart.style = 10
+        chart.style = 2
 
         if chart_type != "pie" and y_title:
             chart.y_axis.title = y_title
