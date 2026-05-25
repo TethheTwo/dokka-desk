@@ -38,8 +38,8 @@ function F({ label, value }: { label: string; value: string | number | null | un
   const v = value === null || value === undefined || value === "" ? "—" : String(value);
   return (
     <div>
-      <div className="text-[9px] text-[#6b7280] font-medium">{label}</div>
-      <div className="text-[12px] text-[#111827] font-medium mt-[1px]">{v}</div>
+      <div className="text-[13px] text-[#6b7280] font-medium">{label}</div>
+      <div className="text-[14px] text-[#111827] font-medium mt-[1px]">{v}</div>
     </div>
   );
 }
@@ -72,12 +72,12 @@ export function ModernFormSheet({ variant, data }: Props) {
 
       <div className="flex items-start justify-between mb-[2px]">
         <div>
-          <div className="text-[9px] text-[#6b7280] font-medium tracking-[0.06em]">{code}</div>
+          <div className="text-[13px] text-[#6b7280] font-medium tracking-[0.06em]">{code}</div>
           <h1 className="text-[15px] font-bold mt-[1px] leading-tight">
             {variant === "ap" ? "Accidentes Personales Patrimoniales" : "Casos Generales"}
           </h1>
         </div>
-        <div className="text-right text-[9px] text-[#6b7280] leading-relaxed">
+        <div className="text-right text-[13px] text-[#6b7280] leading-relaxed">
           <div>
             Registro:{" "}
             <span className="font-semibold text-[#111827]">{data.nro ?? "—"}</span>
@@ -89,7 +89,7 @@ export function ModernFormSheet({ variant, data }: Props) {
         </div>
       </div>
 
-      <div className="text-[9px] text-[#6b7280] mb-[14px]">
+      <div className="text-[13px] text-[#6b7280] mb-[14px]">
         Fecha de solicitud:{" "}
         <span className="font-medium text-[#111827]">{fmtDate(data.fecha_solicitud)}</span>
       </div>
@@ -126,10 +126,10 @@ export function ModernFormSheet({ variant, data }: Props) {
       {data.descripcion && (
         <>
           <hr className="border-t border-[#d1d5db] mb-[10px]" />
-          <div className="text-[9px] font-semibold text-[#6b7280] uppercase tracking-[0.06em] mb-[6px]">
+          <div className="text-[13px] font-semibold text-[#6b7280] uppercase tracking-[0.06em] mb-[6px]">
             Descripci&oacute;n del Incidente
           </div>
-          <p className="text-[11px] text-[#374151] leading-relaxed whitespace-pre-wrap mb-[10px]">
+          <p className="text-[13px] text-[#374151] leading-relaxed whitespace-pre-wrap mb-[10px]">
             {data.descripcion}
           </p>
         </>
@@ -137,7 +137,7 @@ export function ModernFormSheet({ variant, data }: Props) {
 
       <hr className="border-t border-[#d1d5db] mb-[10px]" />
 
-      <div className="text-[9px] font-semibold text-[#6b7280] uppercase tracking-[0.06em] mb-[8px]">
+      <div className="text-[13px] font-semibold text-[#6b7280] uppercase tracking-[0.06em] mb-[8px]">
         Datos del Ejecutivo
       </div>
 
@@ -158,8 +158,8 @@ export function ModernFormSheet({ variant, data }: Props) {
 
       {data.observaciones && (
         <div className="mt-[8px]">
-          <div className="text-[9px] text-[#6b7280] font-medium">Observaciones</div>
-          <div className="text-[11px] text-[#374151] leading-relaxed mt-[1px]">{data.observaciones}</div>
+          <div className="text-[13px] text-[#6b7280] font-medium">Observaciones</div>
+          <div className="text-[13px] text-[#374151] leading-relaxed mt-[1px]">{data.observaciones}</div>
         </div>
       )}
     </div>
