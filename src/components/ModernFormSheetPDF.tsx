@@ -14,12 +14,12 @@ function fmtDate(s?: string | null) {
 }
 
 const C = {
-  border: "#e6e8eb",
+  brand: "#1d84f5",
   label: "#6b7280",
   value: "#111827",
-  brand: "#1d84f5",
   muted: "#9ca3af",
-  cardBg: "#f8faff",
+  border: "#e6e8eb",
+  descText: "#374151",
 };
 
 const styles = StyleSheet.create({
@@ -29,50 +29,14 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: C.value,
   },
-  card: {
-    border: "1 solid " + C.border,
-    borderRadius: 8,
-    marginBottom: 16,
+  accentBar: {
+    borderTop: "3 solid " + C.brand,
+    marginBottom: 10,
   },
-  cardHeader: {
-    padding: "8 14",
-    borderBottom: "1 solid " + C.border,
-  },
-  cardTitle: {
-    fontSize: 10,
-    fontWeight: 700,
-    color: C.value,
-    letterSpacing: 1,
-  },
-  cardBody: {
-    padding: "10 14",
-  },
-  row: {
-    marginBottom: 9,
-    paddingBottom: 9,
-    borderBottom: "1 solid #f3f4f6",
-  },
-  rowLast: {
-    marginBottom: 0,
-    paddingBottom: 0,
-    borderBottom: "none",
-  },
-  rowLabel: {
-    fontSize: 9,
-    fontWeight: 500,
-    color: C.label,
-    letterSpacing: 0.5,
-    marginBottom: 3,
-  },
-  rowValue: {
-    fontSize: 12,
-    fontWeight: 600,
-    color: C.value,
-  },
-  headerTop: {
+  headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   brandName: {
     fontSize: 9,
@@ -88,47 +52,97 @@ const styles = StyleSheet.create({
   formTitle: {
     fontSize: 14,
     fontWeight: 700,
-    marginBottom: 6,
+    marginBottom: 1,
   },
   metaRow: {
     flexDirection: "row",
     gap: 14,
-    marginTop: 6,
-  },
-  metaText: {
-    fontSize: 10,
+    marginBottom: 10,
+    fontSize: 9,
     color: C.label,
   },
   metaValue: {
     fontWeight: 700,
     color: C.value,
   },
-  highlightCard: {
-    border: "1 solid " + C.border,
-    borderRadius: 8,
-    marginBottom: 16,
-    backgroundColor: C.cardBg,
+  divider: {
+    borderTop: "1 solid " + C.border,
+    marginBottom: 8,
+    marginTop: 8,
   },
-  descText: {
-    fontSize: 11,
-    color: "#374151",
-    lineHeight: 1.5,
+  sectionTitle: {
+    fontSize: 8,
+    fontWeight: 700,
+    color: C.label,
+    letterSpacing: 1,
+    marginBottom: 6,
+    marginTop: 0,
   },
-  obsLabel: {
+  row: {
+    flexDirection: "row",
+    gap: 12,
+    paddingVertical: 5,
+    borderBottom: "1 solid " + C.border + "66",
+  },
+  rowLast: {
+    flexDirection: "row",
+    gap: 12,
+    paddingVertical: 5,
+    borderBottom: "none",
+  },
+  rowLabel: {
+    width: 130,
     fontSize: 9,
     fontWeight: 500,
     color: C.label,
     letterSpacing: 0.5,
-    marginBottom: 3,
+  },
+  rowValue: {
+    fontSize: 12,
+    fontWeight: 500,
+    color: C.value,
+    flexGrow: 1,
+  },
+  descBox: {
+    borderRadius: 6,
+    borderLeft: "4 solid " + C.brand,
+    backgroundColor: "#f0f5ff",
+    padding: 10,
+    marginBottom: 8,
+  },
+  descTitle: {
+    fontSize: 8,
+    fontWeight: 700,
+    color: C.brand,
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  descText: {
+    fontSize: 11,
+    color: C.descText,
+    lineHeight: 1.5,
+  },
+  obsRow: {
+    flexDirection: "row",
+    gap: 12,
+    paddingVertical: 5,
+  },
+  obsLabel: {
+    width: 130,
+    fontSize: 9,
+    fontWeight: 500,
+    color: C.label,
+    letterSpacing: 0.5,
   },
   obsText: {
     fontSize: 11,
-    color: "#374151",
+    color: C.descText,
     lineHeight: 1.5,
+    flexGrow: 1,
   },
 });
 
-function InfoRowPDF({
+function FormRowPDF({
   label,
   value,
   last,
@@ -139,26 +153,9 @@ function InfoRowPDF({
 }) {
   const v = value === null || value === undefined || value === "" ? "—" : String(value);
   return (
-    <View style={last ? [styles.row, styles.rowLast] : styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
+    <View style={last ? styles.rowLast : styles.row}>
+      <Text style={styles.rowLabel}>{label.toUpperCase()}</Text>
       <Text style={styles.rowValue}>{v}</Text>
-    </View>
-  );
-}
-
-function Card({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>{title.toUpperCase()}</Text>
-      </View>
-      <View style={styles.cardBody}>{children}</View>
     </View>
   );
 }
@@ -169,92 +166,84 @@ export function ModernFormSheetPDF({ variant, data }: Props) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <View style={styles.card}>
-          <View style={{ padding: 12 }}>
-            <View style={styles.headerTop}>
-              <Text style={styles.brandName}>DOKKA DESK</Text>
-              <Text style={styles.formCode}>{code}</Text>
-            </View>
-            <Text style={styles.formTitle}>
-              {variant === "ap"
-                ? "Accidentes Personales Patrimoniales"
-                : "Casos Generales"}
-            </Text>
-            <View style={styles.metaRow}>
-              <Text style={styles.metaText}>
-                Registro: <Text style={styles.metaValue}>{data.nro ?? "—"}</Text>
-              </Text>
-              <Text style={styles.metaText}>
-                Colaborador:{" "}
-                <Text style={styles.metaValue}>{data.colaborador || "—"}</Text>
-              </Text>
-              <Text style={styles.metaText}>
-                Fecha:{" "}
-                <Text style={styles.metaValue}>{fmtDate(data.fecha_solicitud)}</Text>
-              </Text>
-            </View>
-          </View>
+        <View style={styles.accentBar} />
+
+        <View style={styles.headerRow}>
+          <Text style={styles.brandName}>DOKKA DESK</Text>
+          <Text style={styles.formCode}>{code}</Text>
         </View>
 
-        <Card title="Datos del Siniestro">
-          <InfoRowPDF
-            label="Fecha de solicitud"
-            value={fmtDate(data.fecha_solicitud)}
-          />
-          <InfoRowPDF
-            label="Fecha del siniestro"
-            value={fmtDate(data.fecha_siniestro)}
-          />
-          {variant === "ap" ? (
-            <>
-              <InfoRowPDF
-                label="Nombre del accidentado"
-                value={data.nombre_accidentado}
-              />
-              <InfoRowPDF
-                label="Carnet del accidentado"
-                value={data.carnet_accidentado}
-              />
-            </>
-          ) : (
-            <>
-              <InfoRowPDF label="Asegurado" value={data.asegurado} />
-              {data.danos_personales && (
-                <InfoRowPDF label="Daños personales" value={data.danos_personales} />
-              )}
-            </>
-          )}
-          <InfoRowPDF label="Solicitante" value={data.solicitante} />
-          <InfoRowPDF label="Celular" value={data.celular} />
-          <InfoRowPDF label="Departamento" value={data.departamento} />
-          <InfoRowPDF label="Poliza" value={data.poliza} />
-          <InfoRowPDF label="Direccion" value={data.direccion} last />
-        </Card>
+        <Text style={styles.formTitle}>
+          {variant === "ap"
+            ? "Accidentes Personales Patrimoniales"
+            : "Casos Generales"}
+        </Text>
+
+        <View style={styles.metaRow}>
+          <Text>
+            Registro:{" "}
+            <Text style={styles.metaValue}>{data.nro ?? "—"}</Text>
+          </Text>
+          <Text>
+            Colaborador:{" "}
+            <Text style={styles.metaValue}>{data.colaborador || "—"}</Text>
+          </Text>
+          <Text>
+            Fecha:{" "}
+            <Text style={styles.metaValue}>{fmtDate(data.fecha_solicitud)}</Text>
+          </Text>
+        </View>
+
+        <View style={styles.divider} />
+
+        <Text style={styles.sectionTitle}>DATOS DEL SINIESTRO</Text>
+
+        <FormRowPDF label="Fecha de solicitud" value={fmtDate(data.fecha_solicitud)} />
+        <FormRowPDF label="Fecha del siniestro" value={fmtDate(data.fecha_siniestro)} />
+        {variant === "ap" ? (
+          <>
+            <FormRowPDF label="Nombre del accidentado" value={data.nombre_accidentado} />
+            <FormRowPDF label="Carnet del accidentado" value={data.carnet_accidentado} />
+          </>
+        ) : (
+          <>
+            <FormRowPDF label="Asegurado" value={data.asegurado} />
+            {data.danos_personales && (
+              <FormRowPDF label="Daños personales" value={data.danos_personales} />
+            )}
+          </>
+        )}
+        <FormRowPDF label="Solicitante" value={data.solicitante} />
+        <FormRowPDF label="Celular" value={data.celular} />
+        <FormRowPDF label="Departamento" value={data.departamento} />
+        <FormRowPDF label="Poliza" value={data.poliza} />
+        <FormRowPDF label="Direccion" value={data.direccion} last />
 
         {data.descripcion && (
-          <View style={styles.highlightCard}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>DESCRIPCION DEL INCIDENTE</Text>
-            </View>
-            <View style={styles.cardBody}>
+          <>
+            <View style={styles.divider} />
+            <View style={styles.descBox}>
+              <Text style={styles.descTitle}>DESCRIPCION DEL INCIDENTE</Text>
               <Text style={styles.descText}>{data.descripcion}</Text>
             </View>
-          </View>
+          </>
         )}
 
-        <Card title="Datos del Ejecutivo">
-          <InfoRowPDF label="Nombre" value={data.ejecutivo_nombre} />
-          <InfoRowPDF label="Celular" value={data.ejecutivo_celular} />
-          <InfoRowPDF label="Intentos de llamada" value={data.intentos_llamada} />
-          <InfoRowPDF label="Hubo tripartita" value={data.hubo_tripartita} />
-          <InfoRowPDF label="Hora de contacto" value={data.hora_contacto} />
-          {data.observaciones ? (
-            <View style={styles.row}>
-              <Text style={styles.obsLabel}>OBSERVACIONES</Text>
-              <Text style={styles.obsText}>{data.observaciones}</Text>
-            </View>
-          ) : null}
-        </Card>
+        <View style={styles.divider} />
+
+        <Text style={styles.sectionTitle}>DATOS DEL EJECUTIVO</Text>
+
+        <FormRowPDF label="Nombre" value={data.ejecutivo_nombre} />
+        <FormRowPDF label="Celular" value={data.ejecutivo_celular} />
+        <FormRowPDF label="Intentos de llamada" value={data.intentos_llamada} />
+        <FormRowPDF label="Hubo tripartita" value={data.hubo_tripartita} />
+        <FormRowPDF label="Hora de contacto" value={data.hora_contacto} last />
+        {data.observaciones && (
+          <View style={styles.obsRow}>
+            <Text style={styles.obsLabel}>OBSERVACIONES</Text>
+            <Text style={styles.obsText}>{data.observaciones}</Text>
+          </View>
+        )}
       </Page>
     </Document>
   );
