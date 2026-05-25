@@ -327,7 +327,8 @@ def build_charts(wb, chart_defs: list, sheets_map: dict):
             chart.set_categories(cats)
             if chart.series and num_pts > 0:
                 chart.series[0].tx = SeriesLabel(v=series_name)
-                chart.series[0].dLbls = DataLabelList(showVal=True)
+                if ch.get("show_labels", True):
+                    chart.series[0].dLbls = DataLabelList(showVal=True)
                 pts = []
                 for pi in range(num_pts):
                     pt = ChartDataPoint(idx=pi)
