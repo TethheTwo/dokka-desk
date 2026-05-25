@@ -71,6 +71,7 @@ interface ExportSheet {
   name: string;
   title?: string;
   metadata?: string;
+  metadata2?: string;
   headers?: string[];
   rows?: (string | number | null)[][];
   col_widths?: number[];
@@ -218,7 +219,8 @@ export async function exportTicketsXLSX(tickets: Ticket[], range: DateRange, use
 
 export async function exportDashboardXLSX(tickets: Ticket[], range: DateRange, user = "Usuario") {
   const filtered = tickets.filter((t) => inRange(t.fechaCreacion, range));
-  const metaStr = `${format(range.from, "dd/MM/yyyy")} — ${format(range.to, "dd/MM/yyyy")}   •   ${format(new Date(), "dd/MM/yyyy HH:mm")}   •   Usuario: ${user}   •   Total: ${filtered.length}`;
+  const meta1 = `${format(range.from, "dd/MM/yyyy")} — ${format(range.to, "dd/MM/yyyy")}   •   Total: ${filtered.length}`;
+  const meta2 = `${format(new Date(), "dd/MM/yyyy HH:mm")}   •   Usuario: ${user}`;
 
   // ---- Summary data ----
   const tipoMap = new Map<string, number>();
@@ -351,7 +353,7 @@ export async function exportDashboardXLSX(tickets: Ticket[], range: DateRange, u
       {
         name: "Registros",
         title: "Reporte de Tickets — DOKKA Desk",
-        metadata: metaStr,
+        metadata: `${meta1}   •   ${meta2}`,
         headers: TICKET_HEADERS,
         rows: ticketRows(filtered),
         col_widths: TICKET_COL_WIDTHS,
@@ -359,7 +361,8 @@ export async function exportDashboardXLSX(tickets: Ticket[], range: DateRange, u
       {
         name: "Resumen",
         title: "Resumen de Tickets — DOKKA Desk",
-        metadata: metaStr,
+        metadata: meta1,
+        metadata2: meta2,
         col_widths: [36, 14],
         blocks,
       },
