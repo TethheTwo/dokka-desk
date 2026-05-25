@@ -309,11 +309,12 @@ export async function exportDashboardXLSX(tickets: Ticket[], range: DateRange, u
       sheet: "Resumen",
       data: { min_col: 2, min_row: tipoDataStart, max_col: 2, max_row: tipoDataEnd },
       cats: { min_col: 1, min_row: tipoDataStart, max_col: 1, max_row: tipoDataEnd },
-      position: { col: 3, row: 5 },
+      position: { col: 3, row: 1 },
       color: "2F7FD6",
       y_title: "Cantidad",
       x_title: "Tipo",
       series_name: "Tickets",
+      height: 10,
     });
   }
 
@@ -324,11 +325,12 @@ export async function exportDashboardXLSX(tickets: Ticket[], range: DateRange, u
       sheet: "Resumen",
       data: { min_col: 2, min_row: userDataStart, max_col: 2, max_row: userDataEnd },
       cats: { min_col: 1, min_row: userDataStart, max_col: 1, max_row: userDataEnd },
-      position: { col: 3, row: 40 },
+      position: { col: 3, row: 22 },
       color: "16A34A",
       y_title: "Cantidad",
       x_title: "Usuario",
       series_name: "Cerrados",
+      height: 10,
     });
   }
 
@@ -339,11 +341,12 @@ export async function exportDashboardXLSX(tickets: Ticket[], range: DateRange, u
       sheet: "Resumen",
       data: { min_col: 2, min_row: tendDataStart, max_col: 2, max_row: tendDataEnd },
       cats: { min_col: 1, min_row: tendDataStart, max_col: 1, max_row: tendDataEnd },
-      position: { col: 3, row: 75 },
+      position: { col: 3, row: 43 },
       color: "D97706",
       y_title: "Cantidad",
       x_title: "Fecha",
       series_name: "Tendencia",
+      height: 10,
     });
   }
 
@@ -363,7 +366,7 @@ export async function exportDashboardXLSX(tickets: Ticket[], range: DateRange, u
         title: "Resumen de Tickets — DOKKA Desk",
         metadata: meta1,
         metadata2: meta2,
-        col_widths: [36, 14],
+        col_widths: [25, 25],
         blocks,
       },
     ],
