@@ -315,6 +315,7 @@ export async function exportDashboardXLSX(tickets: Ticket[], range: DateRange, u
       y_title: "Cantidad",
       x_title: "Tipo",
       series_name: "Tickets",
+      height: 10,
     });
   }
 
@@ -330,6 +331,7 @@ export async function exportDashboardXLSX(tickets: Ticket[], range: DateRange, u
       y_title: "Cantidad",
       x_title: "Usuario",
       series_name: "Cerrados",
+      height: 10,
     });
   }
 
@@ -345,6 +347,7 @@ export async function exportDashboardXLSX(tickets: Ticket[], range: DateRange, u
       y_title: "Cantidad",
       x_title: "Fecha",
       series_name: "Tendencia",
+      height: 10,
       show_labels: false,
     });
   }
