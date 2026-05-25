@@ -48,8 +48,8 @@ interface Props {
   data?: FormReportData;
 }
 
-const SHEET_W = 595;
-const SHEET_H = 842;
+const SHEET_W = 900;
+const SHEET_H = 720;
 const BRAND = "#2f7fd6";
 const BAR = "#5a8fc4";
 

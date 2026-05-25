@@ -70,8 +70,8 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
     const canvas = await domToCanvas(node, {
       scale: 5,
       backgroundColor: "#ffffff",
-      width: 595,
-      height: 842,
+      width: 900,
+      height: 720,
     });
     return await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("no blob"))), "image/png");
@@ -270,12 +270,12 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
           position: "fixed",
           left: "-10000px",
           top: 0,
-          width: 595,
-          height: 842,
+          width: 900,
+          height: 720,
           background: "#fff",
         }}
       >
-        <div style={{ width: 595, height: 842 }}>
+        <div style={{ width: 900, height: 720 }}>
           <FormSheet variant={variant} data={data} />
         </div>
       </div>
