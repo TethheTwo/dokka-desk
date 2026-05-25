@@ -278,7 +278,6 @@ def build_charts(wb, chart_defs: list, sheets_map: dict):
             continue
 
         chart.title = title
-        chart.style = 1
 
         if chart_type == "pie":
             pass

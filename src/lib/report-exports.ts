@@ -266,7 +266,7 @@ export async function exportDashboardXLSX(tickets: Ticket[], range: DateRange, u
   let tipoDataStart = 0;
   let tipoDataEnd = 0;
   if (porTipo.length > 0) {
-    tipoDataStart = 6; // after title=1, meta=2, blank=3, section=4, header=5
+    tipoDataStart = 7; // title=1, meta=2, meta2=3, blank=4, section=5, header=6
     tipoDataEnd = tipoDataStart + porTipo.length - 1;
   }
 
