@@ -12,9 +12,6 @@ from openpyxl.utils import get_column_letter
 from openpyxl.chart import BarChart, LineChart, PieChart, Reference
 from openpyxl.chart.series import DataPoint as ChartDataPoint, SeriesLabel
 from openpyxl.chart.label import DataLabelList
-from openpyxl.chart.shapes import GraphicalProperties
-from openpyxl.drawing.line import LineProperties, LineEndProperties
-from openpyxl.drawing.fill import PatternFillProperties
 
 
 CHART_COLORS = [
@@ -254,22 +251,6 @@ def build_sheet(ws, sheet_def: dict, styles: dict):
             ws.column_dimensions[get_column_letter(i + 1)].width = w
 
 
-CHART_GRAYS = [
-    "4B5563",  # gray-600
-    "6B7280",  # gray-500
-    "9CA3AF",  # gray-400
-    "374151",  # gray-700
-    "1F2937",  # gray-800
-    "7C3AED",  # violet
-    "DC2626",  # red
-    "D97706",  # amber
-    "059669",  # green
-    "2563EB",  # blue
-    "BE185D",  # pink
-    "0E7490",  # teal
-]
-
-
 def build_charts(wb, chart_defs: list, sheets_map: dict):
     for ch in chart_defs:
         sheet_name = ch.get("sheet")
@@ -282,6 +263,7 @@ def build_charts(wb, chart_defs: list, sheets_map: dict):
         data_ref = ch.get("data", {})
         cats_ref = ch.get("cats", {})
         pos = ch.get("position", {"col": 5, "row": 5})
+        color = hex_to_rgb(ch.get("color", "2F7FD6"))
         y_title = ch.get("y_title", "")
         x_title = ch.get("x_title", "")
 
@@ -318,23 +300,10 @@ def build_charts(wb, chart_defs: list, sheets_map: dict):
             continue
 
         series_name = ch.get("series_name", title)
+
+        # Number of data points
         num_pts = data_ref.get("max_row", 1) - data_ref.get("min_row", 1) + 1
 
-        # ---- Styling ----
-        # Legend
-        if chart_type == "line":
-            chart.legend.position = "r"
-        else:
-            chart.legend.position = "b"
-
-        # Plot area background (light gray)
-        try:
-            gp = GraphicalProperties(solidFill="F2F2F2")
-            chart.plot_area.graphicalProperties = gp
-        except Exception:
-            pass
-
-        # Data & categories
         if chart_type == "pie":
             chart.add_data(data)
             chart.set_categories(cats)
@@ -342,7 +311,7 @@ def build_charts(wb, chart_defs: list, sheets_map: dict):
                 pts = []
                 for pi in range(num_pts):
                     pt = ChartDataPoint(idx=pi)
-                    pt.graphicalProperties.solidFill = hex_to_rgb(CHART_GRAYS[pi % len(CHART_GRAYS)])
+                    pt.graphicalProperties.solidFill = hex_to_rgb(CHART_COLORS[pi % len(CHART_COLORS)])
                     pts.append(pt)
                 chart.series[0].data_points = pts
         else:
@@ -350,39 +319,23 @@ def build_charts(wb, chart_defs: list, sheets_map: dict):
             chart.set_categories(cats)
             if chart.series and num_pts > 0:
                 chart.series[0].tx = SeriesLabel(v=series_name)
-
-                # Data labels
                 if ch.get("show_labels", True):
                     chart.series[0].dLbls = DataLabelList(showVal=True)
-
-                # Per-point colors
                 pts = []
                 for pi in range(num_pts):
                     pt = ChartDataPoint(idx=pi)
-                    pt.graphicalProperties.solidFill = hex_to_rgb(CHART_GRAYS[pi % len(CHART_GRAYS)])
+                    pt.graphicalProperties.solidFill = hex_to_rgb(CHART_COLORS[pi % len(CHART_COLORS)])
                     pts.append(pt)
                 chart.series[0].data_points = pts
-
-                # Line-specific: markers
-                if chart_type == "line":
-                    chart.series[0].marker.symbol = "circle"
-                    chart.series[0].marker.size = 5
-                    chart.series[0].smooth = False
 
         # Position
         col_letter = get_column_letter(pos.get("col", 5))
         row_num = pos.get("row", 5)
         anchor = f"{col_letter}{row_num}"
 
-        # 2:1 aspect ratio
-        chart.width = ch.get("width", 22)
-        chart.height = ch.get("height", 11)
-
-        # Remove auto-title from legend if data labels show values
-        try:
-            chart.legend.overlay = False
-        except Exception:
-            pass
+        # Shape size
+        chart.width = ch.get("width", 18)
+        chart.height = ch.get("height", 12)
 
         ws.add_chart(chart, anchor)
 
