@@ -14,7 +14,6 @@ interface Props {
 }
 
 const CC_FIXED = "nacionalseguros@conecta.com.bo";
-const FOOTER_H = 40;
 
 function fmtTime(iso?: string | null) {
   if (!iso) return "";
@@ -72,7 +71,7 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
       scale: 5,
       backgroundColor: "#ffffff",
       width: 595,
-      height: 842 + FOOTER_H,
+      height: 842,
     });
     return await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("no blob"))), "image/png");
@@ -272,42 +271,12 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
           left: "-10000px",
           top: 0,
           width: 595,
-          height: 842 + FOOTER_H,
+          height: 842,
           background: "#fff",
         }}
       >
         <div style={{ width: 595, height: 842 }}>
           <FormSheet variant={variant} data={data} />
-        </div>
-        <div
-          style={{
-            width: 595,
-            height: FOOTER_H,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            borderTop: "1px solid #cbd5e1",
-            padding: "0 16px",
-            fontSize: 11,
-            color: "#64748b",
-            fontFamily: "Arial, sans-serif",
-            boxSizing: "border-box",
-          }}
-        >
-          <span>Reporte {code}</span>
-          {ejecutivo && <span>{ejecutivo}</span>}
-          <span
-            style={{
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              maxWidth: 300,
-              direction: "rtl",
-              textAlign: "right",
-            }}
-          >
-            {link}
-          </span>
         </div>
       </div>
 
