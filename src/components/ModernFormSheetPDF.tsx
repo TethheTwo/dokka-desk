@@ -65,7 +65,6 @@ const styles = StyleSheet.create({
   divider: {
     borderTop: "1 solid #d1d5db",
     marginBottom: 12,
-    marginTop: 0,
   },
   sectionTitle: {
     fontSize: 9,
@@ -74,11 +73,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: "uppercase" as const,
     marginBottom: 8,
-    marginTop: 0,
   },
   fieldRow: {
-    width: "50%" as const,
+    flexDirection: "row",
     marginBottom: 8,
+  },
+  fieldCol: {
+    width: "50%",
   },
   fieldLabel: {
     fontSize: 9,
@@ -91,17 +92,8 @@ const styles = StyleSheet.create({
     fontWeight: 500,
     marginTop: 1,
   },
-  fieldWide: {
-    width: "100%" as const,
+  fieldFullWidth: {
     marginBottom: 8,
-  },
-  gridRow: {
-    flexDirection: "row" as const,
-    flexWrap: "wrap" as const,
-    gap: 24,
-  },
-  descSection: {
-    marginBottom: 10,
   },
   descTitle: {
     fontSize: 9,
@@ -115,6 +107,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: C.text,
     lineHeight: 1.5,
+    marginBottom: 10,
   },
   obsText: {
     fontSize: 11,
@@ -124,26 +117,46 @@ const styles = StyleSheet.create({
   },
 });
 
-function FieldPDF({
+function F({
   label,
   value,
-  last,
 }: {
   label: string;
   value: string | number | null | undefined;
-  last?: boolean;
 }) {
   const v = value === null || value === undefined || value === "" ? "—" : String(value);
   return (
-    <View style={last ? { width: "50%", marginBottom: 0 } : styles.fieldRow}>
+    <View>
       <Text style={styles.fieldLabel}>{label}</Text>
       <Text style={styles.fieldValue}>{v}</Text>
     </View>
   );
 }
 
+function Pair({
+  a,
+  b,
+}: {
+  a: { label: string; value: string | number | null | undefined };
+  b: { label: string; value: string | number | null | undefined };
+}) {
+  return (
+    <View style={styles.fieldRow}>
+      <View style={styles.fieldCol}>
+        <F label={a.label} value={a.value} />
+      </View>
+      <View style={styles.fieldCol}>
+        <F label={b.label} value={b.value} />
+      </View>
+    </View>
+  );
+}
+
 export function ModernFormSheetPDF({ variant, data }: Props) {
   const code = variant === "ap" ? "F-775" : "F-805";
+
+  const v = (val: string | number | null | undefined) =>
+    val === null || val === undefined || val === "" ? "—" : String(val);
 
   return (
     <Document>
@@ -179,53 +192,41 @@ export function ModernFormSheetPDF({ variant, data }: Props) {
 
         <View style={styles.divider} />
 
-        <View style={styles.gridRow}>
-          <FieldPDF
-            label="Fecha de solicitud"
-            value={fmtDate(data.fecha_solicitud)}
+        <Pair
+          a={{ label: "Fecha de solicitud", value: fmtDate(data.fecha_solicitud) }}
+          b={{ label: "Fecha del siniestro", value: fmtDate(data.fecha_siniestro) }}
+        />
+        {variant === "ap" ? (
+          <Pair
+            a={{ label: "Nombre del accidentado", value: data.nombre_accidentado }}
+            b={{ label: "Carnet del accidentado", value: data.carnet_accidentado }}
           />
-          <FieldPDF
-            label="Fecha del siniestro"
-            value={fmtDate(data.fecha_siniestro)}
+        ) : (
+          <Pair
+            a={{ label: "Asegurado", value: data.asegurado }}
+            b={{
+              label: "Daños personales",
+              value: data.danos_personales || "—",
+            }}
           />
-          {variant === "ap" ? (
-            <>
-              <FieldPDF
-                label="Nombre del accidentado"
-                value={data.nombre_accidentado}
-              />
-              <FieldPDF
-                label="Carnet del accidentado"
-                value={data.carnet_accidentado}
-              />
-            </>
-          ) : (
-            <>
-              <FieldPDF label="Asegurado" value={data.asegurado} />
-              {data.danos_personales && (
-                <FieldPDF label="Daños personales" value={data.danos_personales} />
-              )}
-            </>
-          )}
-          <FieldPDF label="Solicitante" value={data.solicitante} />
-          <FieldPDF label="Celular" value={data.celular} />
-          <FieldPDF label="Departamento" value={data.departamento} />
-          <FieldPDF label="Poliza" value={data.poliza} />
-        </View>
-        <View style={[styles.fieldWide, { marginBottom: 0 }]}>
-          <Text style={styles.fieldLabel}>Direccion</Text>
-          <Text style={styles.fieldValue}>{data.direccion || "—"}</Text>
+        )}
+        <Pair
+          a={{ label: "Solicitante", value: data.solicitante }}
+          b={{ label: "Celular", value: data.celular }}
+        />
+        <Pair
+          a={{ label: "Departamento", value: data.departamento }}
+          b={{ label: "Póliza", value: data.poliza }}
+        />
+        <View style={styles.fieldFullWidth}>
+          <F label="Dirección" value={data.direccion} />
         </View>
 
         {data.descripcion && (
           <>
-            <View style={[styles.divider, { marginTop: 12 }]} />
-            <View style={styles.descSection}>
-              <Text style={styles.descTitle}>
-                Descripcion del Incidente
-              </Text>
-              <Text style={styles.descText}>{data.descripcion}</Text>
-            </View>
+            <View style={styles.divider} />
+            <Text style={styles.descTitle}>Descripción del Incidente</Text>
+            <Text style={styles.descText}>{data.descripcion}</Text>
           </>
         )}
 
@@ -233,12 +234,19 @@ export function ModernFormSheetPDF({ variant, data }: Props) {
 
         <Text style={styles.sectionTitle}>Datos del Ejecutivo</Text>
 
-        <View style={styles.gridRow}>
-          <FieldPDF label="Nombre" value={data.ejecutivo_nombre} />
-          <FieldPDF label="Celular" value={data.ejecutivo_celular} />
-          <FieldPDF label="Intentos de llamada" value={data.intentos_llamada} />
-          <FieldPDF label="Hubo tripartita" value={data.hubo_tripartita} />
-          <FieldPDF label="Hora de contacto" value={data.hora_contacto} />
+        <Pair
+          a={{ label: "Nombre", value: data.ejecutivo_nombre }}
+          b={{ label: "Celular", value: data.ejecutivo_celular }}
+        />
+        <Pair
+          a={{ label: "Intentos de llamada", value: data.intentos_llamada }}
+          b={{ label: "Hubo tripartita", value: data.hubo_tripartita }}
+        />
+        <View style={styles.fieldRow}>
+          <View style={styles.fieldCol}>
+            <F label="Hora de contacto" value={data.hora_contacto} />
+          </View>
+          <View style={styles.fieldCol} />
         </View>
 
         {data.observaciones && (
