@@ -65,7 +65,7 @@ export function AppTopBar() {
                 onToggle={() => toggle("admin")}
               >
                 {isAdmin && <DropdownItem to="/administracion/usuarios">Usuarios</DropdownItem>}
-                <DropdownItem to="/administracion/roles">Roles</DropdownItem>
+                {isAdmin && <DropdownItem to="/administracion/roles">Roles</DropdownItem>}
                 {can("view_dashboard") && (
                   <DropdownItem to="/reportes/dashboard">Dashboard</DropdownItem>
                 )}
