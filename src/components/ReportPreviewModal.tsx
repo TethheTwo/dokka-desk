@@ -154,18 +154,9 @@ export function ReportPreviewModal({
       const img = c.toDataURL("image/png");
       const pdf = new (await import("jspdf")).jsPDF({
         unit: "pt",
-        format: "a4",
-        orientation: "portrait",
+        format: [SHEET_W, SHEET_H],
       });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const margin = 20;
-      const targetW = pageW - margin * 2;
-      const targetH = pageH - margin * 2;
-      const ratio = Math.min(targetW / c.width, targetH / c.height);
-      const w = c.width * ratio;
-      const h = c.height * ratio;
-      pdf.addImage(img, "PNG", (pageW - w) / 2, (pageH - h) / 2, w, h);
+      pdf.addImage(img, "PNG", 0, 0, SHEET_W, SHEET_H);
       pdf.save(`${fileBase()}.pdf`);
       toast.success("PDF descargado");
     } catch (e) {
