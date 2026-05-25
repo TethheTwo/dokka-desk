@@ -44,3 +44,4 @@ package-lock.json
 # Seed data (datos de prueba, no se suben al repo)
 seed_datos.sql
 seed_reportes.sql
+seed_dummy_data.sql
