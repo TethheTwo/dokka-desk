@@ -176,7 +176,7 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
     const sectionStyle =
       "margin:18px 0 6px;font-size:14px;font-weight:700;letter-spacing:.04em;color:#0f172a;text-transform:uppercase;";
     const hrStyle = "border:none;border-top:1px solid #cbd5e1;margin:0 0 10px;";
-    const rowStyle = "margin:3px 0;font-size:13px;line-height:1.5;color:#0f172a;";
+    const rowStyle = "margin:3px 0;font-size:15px;line-height:1.5;color:#0f172a;";
     const labelStyle = "font-weight:600;color:#334155;";
 
     const rowHTML = (label: string, value: string) =>
@@ -204,9 +204,9 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
 
     const bodyHTML = `
 <div style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;max-width:680px;">
-  <p style="margin:0 0 4px;font-size:14px;"><strong>Estimados:</strong></p>
-  <p style="margin:0 0 12px;font-size:13px;">Saludos cordiales.</p>
-  <p style="margin:0 0 12px;font-size:13px;line-height:1.5;">${introTxt}</p>
+  <p style="margin:0 0 4px;font-size:16px;"><strong>Estimados:</strong></p>
+  <p style="margin:0 0 12px;font-size:15px;">Saludos cordiales.</p>
+  <p style="margin:0 0 12px;font-size:15px;line-height:1.5;">${introTxt}</p>
 
   <h3 style="${sectionStyle}">Datos Registrados</h3>
   <hr style="${hrStyle}" />
