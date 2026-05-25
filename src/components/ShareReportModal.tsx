@@ -3,7 +3,7 @@ import { Copy, Mail, X, Check, ArrowLeft } from "lucide-react";
 import { domToCanvas } from "modern-screenshot";
 import { toast } from "sonner";
 import { useMasterList } from "@/lib/master-lists";
-import { FormSheet, type FormReportData } from "@/components/ReportPreviewModal";
+import { ModernFormSheet, type FormReportData } from "@/components/ModernFormSheet";
 import { formatCode } from "@/lib/utils";
 
 interface Props {
@@ -68,10 +68,10 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
     const node = captureRef.current;
     if (!node) throw new Error("no node");
     const canvas = await domToCanvas(node, {
-      scale: 2,
+      scale: 5,
       backgroundColor: "#ffffff",
-      width: 900,
-      height: 720,
+      width: 595,
+      height: 842,
     });
     return await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("no blob"))), "image/png");
@@ -86,16 +86,14 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
       const file = new File([blob], `reporte-${code}.png`, { type: "image/png" });
       const nav = navigator as any;
       const shortText = `Reporte ${code}${ejecutivo ? " · " + ejecutivo : ""}`;
-      // Intentar share nativo con archivo (móvil + algunos navegadores desktop)
       if (nav.share && typeof nav.canShare === "function" && nav.canShare({ files: [file] })) {
         try {
           await nav.share({ files: [file], text: shortText, title: "Reporte" });
           return;
         } catch {
-          /* el usuario canceló o el navegador no permitió */
+          /* usuario canceló */
         }
       }
-      // Fallback: descargar imagen + abrir WhatsApp Web con instrucciones
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -123,7 +121,6 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
         ? `F-805 Atención de Casos Generales/${data.asegurado ?? ""}/${data.departamento ?? ""}/${ejecutivo}`
         : `F-775 Atención de Accidentes Personales NSPF/${data.nombre_accidentado ?? ""}/${data.departamento ?? ""}/${ejecutivo}`;
 
-    // ====== Versión texto plano estructurada (para mailto) ======
     const sep = "────────────────────────────";
     const introTxt =
       variant === "cg"
@@ -176,7 +173,6 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
       `Link del reporte: ${link}`,
     ].join("\n");
 
-    // ====== Versión HTML (para Outlook Web / Gmail deeplinks) ======
     const sectionStyle =
       "margin:18px 0 6px;font-size:14px;font-weight:700;letter-spacing:.04em;color:#0f172a;text-transform:uppercase;";
     const hrStyle = "border:none;border-top:1px solid #cbd5e1;margin:0 0 10px;";
@@ -207,7 +203,7 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
           ].join("");
 
     const bodyHTML = `
-<div style="font-family:Calibri,Arial,sans-serif;color:#0f172a;max-width:680px;">
+<div style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;max-width:680px;">
   <p style="margin:0 0 4px;font-size:14px;"><strong>Estimados:</strong></p>
   <p style="margin:0 0 12px;font-size:13px;">Saludos cordiales.</p>
   <p style="margin:0 0 12px;font-size:13px;line-height:1.5;">${introTxt}</p>
@@ -266,7 +262,7 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      {/* Nodo oculto para capturar la imagen del reporte */}
+      {/* Hidden capture target */}
       <div
         ref={captureRef}
         aria-hidden
@@ -274,12 +270,14 @@ export function ShareReportModal({ open, onClose, variant, data }: Props) {
           position: "fixed",
           left: "-10000px",
           top: 0,
-          width: 900,
-          height: 720,
+          width: 595,
+          height: 842,
           background: "#fff",
         }}
       >
-        <FormSheet variant={variant} data={data} />
+        <div style={{ width: 595, height: 842 }}>
+          <ModernFormSheet variant={variant} data={data} />
+        </div>
       </div>
 
       <div
