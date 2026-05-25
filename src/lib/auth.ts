@@ -137,6 +137,12 @@ export async function updateProfile(patch: { full_name?: string; email?: string 
   if (patch.email && patch.email !== state.user.email) {
     const { error: e2 } = await supabase.auth.updateUser({ email: patch.email });
     if (e2) throw e2;
+    const { data, error: e3 } = await supabase.auth.getUser();
+    if (e3) throw e3;
+    if (data?.user) {
+      setState({ session: { ...state.session, user: data.user } as any, user: data.user });
+      return await loadProfileAndRoles(data.user);
+    }
   }
   if (state.user) await loadProfileAndRoles(state.user);
 }

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Camera, FileText, X, Image as ImageIcon } from "lucide-react";
-import html2canvas from "html2canvas";
+import { domToCanvas } from "modern-screenshot";
 import { jsPDF } from "jspdf";
 import { toast } from "sonner";
 import { formatCode } from "@/lib/utils";
@@ -66,8 +66,8 @@ export function ReportPreviewModal({
   data,
 }: Props) {
   const sheetRef = useRef<HTMLDivElement>(null);
-  const captureRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const cachedCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [scale, setScale] = useState(1);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -96,18 +96,20 @@ export function ReportPreviewModal({
   if (!open) return null;
 
   const renderCanvas = async () => {
-    const node = captureRef.current;
+    if (cachedCanvasRef.current) return cachedCanvasRef.current;
+    const node = sheetRef.current;
     if (!node) throw new Error("no node");
-    return await html2canvas(node, {
-      scale: 2,
+    const savedTransform = node.style.transform;
+    node.style.transform = "none";
+    const canvas = await domToCanvas(node, {
       backgroundColor: "#ffffff",
-      useCORS: false,
-      logging: false,
       width: SHEET_W,
       height: SHEET_H,
-      windowWidth: SHEET_W,
-      windowHeight: SHEET_H,
+      scale: 1,
     });
+    node.style.transform = savedTransform;
+    cachedCanvasRef.current = canvas;
+    return canvas;
   };
 
   const fileBase = () => {
@@ -253,13 +255,6 @@ export function ReportPreviewModal({
               <FileText className="h-3.5 w-3.5" /> PDF
             </button>
             <button
-              onClick={() => window.print()}
-              disabled={busy !== null}
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-slate-600 text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50"
-            >
-              <FileText className="h-3.5 w-3.5" /> Imprimir
-            </button>
-            <button
               onClick={onClose}
               className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted"
             >
@@ -289,44 +284,21 @@ export function ReportPreviewModal({
                   color: "#0f172a",
                 }}
               >
-                {variant && data ? (
-                  <FormSheet variant={variant} data={data} />
-                ) : (
-                  <GenericSheet
-                    title={title}
-                    subtitle={subtitle}
-                    nro={nro}
-                    sections={sections ?? []}
-                  />
-                )}
+                <div style={{ width: "100%", height: "100%" }}>
+                  {variant && data ? (
+                    <FormSheet variant={variant} data={data} />
+                  ) : (
+                    <GenericSheet
+                      title={title}
+                      subtitle={subtitle}
+                      nro={nro}
+                      sections={sections ?? []}
+                    />
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Hidden unscaled capture target for html2canvas */}
-        <div
-          ref={captureRef}
-          style={{
-            position: "fixed",
-            left: "-10000px",
-            top: "0",
-            width: `${SHEET_W}px`,
-            height: `${SHEET_H}px`,
-            background: "#ffffff",
-            zIndex: -1,
-          }}
-        >
-          {variant && data ? (
-            <FormSheet variant={variant} data={data} />
-          ) : (
-            <GenericSheet
-              title={title}
-              subtitle={subtitle}
-              nro={nro}
-              sections={sections ?? []}
-            />
-          )}
         </div>
       </div>
     </div>

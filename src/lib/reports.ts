@@ -157,55 +157,106 @@ export async function downloadTicketPDF(ticket: Ticket) {
     nextY = (doc as any).lastAutoTable.finalY + 24;
   }
 
-  // Adjuntos
-  const allAttachments: TicketAttachment[] = [
-    ...ticket.attachments,
-    ...ticket.notes.flatMap((n) => n.attachments),
+  // Adjuntos con imágenes embebidas en tabla
+  const allAttachments: (TicketAttachment & { noteRef: string })[] = [
+    ...ticket.attachments.map((a) => ({ ...a, noteRef: "Ticket" })),
+    ...ticket.notes.flatMap((n) =>
+      n.attachments.map((a) => ({
+        ...a,
+        noteRef: `${format(new Date(n.fecha), "dd/MM HH:mm")} - ${n.usuario}`,
+      })),
+    ),
   ];
-  const imageAttachments = allAttachments.filter((a) => a.type.startsWith("image/"));
+
+  // Fetch images antes de construir la tabla
+  const imageCache = new Map<string, { b64: string; w: number; h: number }>();
+  await Promise.all(
+    allAttachments
+      .filter((a) => a.type.startsWith("image/"))
+      .map(async (a) => {
+        try {
+          const resp = await fetch(`${SUPABASE_URL}/storage/v1/object/ticket-attachments/${a.storage_path}`);
+          if (resp.ok) {
+            const blob = await resp.blob();
+            const b64 = await blobToBase64(blob);
+            const dims = await new Promise<{ w: number; h: number }>((resolve) => {
+              const img = new Image();
+              img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+              img.onerror = () => resolve({ w: 200, h: 150 });
+              img.src = b64;
+            });
+            imageCache.set(a.storage_path, { b64, ...dims });
+          }
+        } catch {}
+      }),
+  );
+
+  const imgColW = (pageW - 80) - 100 - 120;
+  const maxImgH = 140;
+
+  const buildRow = (a: TicketAttachment & { noteRef: string }) => {
+    if (!a.type.startsWith("image/")) {
+      return [
+        { content: a.noteRef },
+        { content: a.name },
+        { content: a.type },
+      ];
+    }
+    const cached = imageCache.get(a.storage_path);
+    if (!cached) return [
+      { content: a.noteRef },
+      { content: a.name },
+      { content: "(sin imagen)" },
+    ];
+    const scale = Math.min((imgColW - 6) / cached.w, maxImgH / cached.h);
+    const rowH = Math.max(cached.h * scale + 6, 30);
+    return [
+      { content: a.noteRef, styles: { minCellHeight: rowH } },
+      { content: a.name, styles: { minCellHeight: rowH } },
+      { content: "", styles: { minCellHeight: rowH } },
+    ];
+  };
 
   if (allAttachments.length > 0) {
     doc.setFontSize(13);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(40, 40, 40);
     doc.text(`Adjuntos (${allAttachments.length})`, 40, nextY);
+
     autoTable(doc, {
       startY: nextY + 6,
-      head: [["Nombre", "Tipo"]],
-      body: allAttachments.map((a) => [a.name, a.type]),
+      head: [["Nota", "Archivo", "Vista previa"]],
+      body: allAttachments.map((a) => buildRow(a)),
       theme: "grid",
       headStyles: { fillColor: [47, 127, 214], textColor: 255, fontSize: 10 },
       bodyStyles: { fontSize: 9 },
+      columnStyles: {
+        0: { cellWidth: 100 },
+        1: { cellWidth: 120 },
+      },
       margin: { left: 40, right: 40 },
+      didDrawCell: (data: any) => {
+        if (data.column.index === 2 && data.cell.section === "body") {
+          const attach = allAttachments[data.row.index];
+          if (attach && attach.type.startsWith("image/")) {
+            const cached = imageCache.get(attach.storage_path);
+            if (cached) {
+              const cellW = data.cell.width - 6;
+              const cellH = data.cell.height - 6;
+              const scale = Math.min(cellW / cached.w, cellH / cached.h);
+              const drawW = cached.w * scale;
+              const drawH = cached.h * scale;
+              const cx = data.cell.x + 3 + (cellW - drawW) / 2;
+              const cy = data.cell.y + 3 + (cellH - drawH) / 2;
+              try {
+                doc.addImage(cached.b64, "JPEG" as any, cx, cy, drawW, drawH);
+              } catch {}
+            }
+          }
+        }
+      },
     });
     nextY = (doc as any).lastAutoTable.finalY + 24;
-  }
-
-  // Imágenes adjuntas embebidas
-  for (const img of imageAttachments) {
-    try {
-      const url = `${SUPABASE_URL}/storage/v1/object/ticket-attachments/${img.storage_path}`;
-      const resp = await fetch(url);
-      if (!resp.ok) continue;
-      const blob = await resp.blob();
-      const base64 = await blobToBase64(blob);
-
-      if (nextY + 220 > doc.internal.pageSize.getHeight() - 40) {
-        doc.addPage();
-        nextY = 40;
-      }
-
-      const maxW = doc.internal.pageSize.getWidth() - 80;
-      doc.addImage(base64, "JPEG" as any, 40, nextY, maxW, 200);
-      nextY += 210;
-
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      doc.text(img.name, 40, nextY);
-      nextY += 14;
-    } catch (e) {
-      console.error("Error embedding image in PDF:", img.name, e);
-    }
   }
 
   // Pie de página
