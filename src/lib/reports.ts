@@ -213,14 +213,22 @@ export async function downloadTicketPDF(ticket: Ticket) {
           if (attach && attach.type.startsWith("image/")) {
             const b64 = imageCache.get(attach.storage_path);
             if (b64) {
-              const x = data.cell.x + 2;
-              const y = data.cell.y + 2;
-              const cellW = data.cell.width - 4;
-              const cellH = data.cell.height - 4;
-              const imgH = Math.min(cellH, maxImgH);
-              const imgW = cellW;
+              const pad = 3;
+              const x = data.cell.x + pad;
+              const y = data.cell.y + pad;
+              const cellW = data.cell.width - pad * 2;
+              const cellH = data.cell.height - pad * 2;
               try {
-                doc.addImage(b64, "JPEG" as any, x, y, imgW, imgH);
+                const img = new Image();
+                img.src = b64;
+                const natW = img.naturalWidth || cellW;
+                const natH = img.naturalHeight || cellH;
+                const scale = Math.min(cellW / natW, cellH / natH, maxImgH / natH);
+                const drawW = natW * scale;
+                const drawH = natH * scale;
+                const cx = x + (cellW - drawW) / 2;
+                const cy = y + (cellH - drawH) / 2;
+                doc.addImage(b64, "JPEG" as any, cx, cy, drawW, drawH);
               } catch {}
             }
           }
