@@ -17,132 +17,114 @@ const C = {
   brand: "#1d84f5",
   label: "#6b7280",
   value: "#111827",
-  muted: "#9ca3af",
-  border: "#e6e8eb",
-  descText: "#374151",
+  text: "#374151",
 };
 
 const styles = StyleSheet.create({
   page: {
     padding: 28,
     fontFamily: "Helvetica",
-    fontSize: 10,
+    fontSize: 9,
     color: C.value,
   },
-  accentBar: {
-    borderTop: "3 solid " + C.brand,
-    marginBottom: 10,
+  accent: {
+    borderTop: "1.5 solid " + C.brand,
+    marginBottom: 12,
   },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 4,
-  },
-  brandName: {
-    fontSize: 9,
-    fontWeight: 600,
-    color: C.muted,
-    letterSpacing: 1.5,
+    marginBottom: 2,
   },
   formCode: {
-    fontSize: 10,
-    fontWeight: 700,
-    color: C.brand,
-  },
-  formTitle: {
-    fontSize: 14,
-    fontWeight: 700,
-    marginBottom: 1,
-  },
-  metaRow: {
-    flexDirection: "row",
-    gap: 14,
-    marginBottom: 10,
     fontSize: 9,
     color: C.label,
-  },
-  metaValue: {
-    fontWeight: 700,
-    color: C.value,
-  },
-  divider: {
-    borderTop: "1 solid " + C.border,
-    marginBottom: 8,
-    marginTop: 8,
-  },
-  sectionTitle: {
-    fontSize: 8,
-    fontWeight: 700,
-    color: C.label,
-    letterSpacing: 1,
-    marginBottom: 6,
-    marginTop: 0,
-  },
-  row: {
-    flexDirection: "row",
-    gap: 12,
-    paddingVertical: 5,
-    borderBottom: "1 solid " + C.border + "66",
-  },
-  rowLast: {
-    flexDirection: "row",
-    gap: 12,
-    paddingVertical: 5,
-    borderBottom: "none",
-  },
-  rowLabel: {
-    width: 130,
-    fontSize: 9,
     fontWeight: 500,
-    color: C.label,
     letterSpacing: 0.5,
   },
-  rowValue: {
-    fontSize: 12,
-    fontWeight: 500,
-    color: C.value,
-    flexGrow: 1,
+  formTitle: {
+    fontSize: 15,
+    fontWeight: 700,
+    marginTop: 1,
   },
-  descBox: {
-    borderRadius: 6,
-    borderLeft: "4 solid " + C.brand,
-    backgroundColor: "#f0f5ff",
-    padding: 10,
+  rightMeta: {
+    textAlign: "right" as const,
+    fontSize: 9,
+    color: C.label,
+    lineHeight: 1.6,
+  },
+  metaValue: {
+    fontWeight: 600,
+    color: C.value,
+  },
+  headerDate: {
+    fontSize: 9,
+    color: C.label,
+    marginBottom: 14,
+  },
+  divider: {
+    borderTop: "1 solid #d1d5db",
+    marginBottom: 12,
+    marginTop: 0,
+  },
+  sectionTitle: {
+    fontSize: 9,
+    fontWeight: 600,
+    color: C.label,
+    letterSpacing: 0.5,
+    textTransform: "uppercase" as const,
+    marginBottom: 8,
+    marginTop: 0,
+  },
+  fieldRow: {
+    width: "50%" as const,
     marginBottom: 8,
   },
+  fieldLabel: {
+    fontSize: 9,
+    color: C.label,
+    fontWeight: 500,
+  },
+  fieldValue: {
+    fontSize: 12,
+    color: C.value,
+    fontWeight: 500,
+    marginTop: 1,
+  },
+  fieldWide: {
+    width: "100%" as const,
+    marginBottom: 8,
+  },
+  gridRow: {
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
+    gap: 24,
+  },
+  descSection: {
+    marginBottom: 10,
+  },
   descTitle: {
-    fontSize: 8,
-    fontWeight: 700,
-    color: C.brand,
-    letterSpacing: 1,
-    marginBottom: 4,
+    fontSize: 9,
+    fontWeight: 600,
+    color: C.label,
+    letterSpacing: 0.5,
+    textTransform: "uppercase" as const,
+    marginBottom: 6,
   },
   descText: {
     fontSize: 11,
-    color: C.descText,
+    color: C.text,
     lineHeight: 1.5,
-  },
-  obsRow: {
-    flexDirection: "row",
-    gap: 12,
-    paddingVertical: 5,
-  },
-  obsLabel: {
-    width: 130,
-    fontSize: 9,
-    fontWeight: 500,
-    color: C.label,
-    letterSpacing: 0.5,
   },
   obsText: {
     fontSize: 11,
-    color: C.descText,
+    color: C.text,
     lineHeight: 1.5,
-    flexGrow: 1,
+    marginTop: 1,
   },
 });
 
-function FormRowPDF({
+function FieldPDF({
   label,
   value,
   last,
@@ -153,9 +135,9 @@ function FormRowPDF({
 }) {
   const v = value === null || value === undefined || value === "" ? "—" : String(value);
   return (
-    <View style={last ? styles.rowLast : styles.row}>
-      <Text style={styles.rowLabel}>{label.toUpperCase()}</Text>
-      <Text style={styles.rowValue}>{v}</Text>
+    <View style={last ? { width: "50%", marginBottom: 0 } : styles.fieldRow}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <Text style={styles.fieldValue}>{v}</Text>
     </View>
   );
 }
@@ -166,64 +148,82 @@ export function ModernFormSheetPDF({ variant, data }: Props) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <View style={styles.accentBar} />
+        <View style={styles.accent} />
 
         <View style={styles.headerRow}>
-          <Text style={styles.brandName}>DOKKA DESK</Text>
-          <Text style={styles.formCode}>{code}</Text>
+          <View>
+            <Text style={styles.formCode}>{code}</Text>
+            <Text style={styles.formTitle}>
+              {variant === "ap"
+                ? "Accidentes Personales Patrimoniales"
+                : "Casos Generales"}
+            </Text>
+          </View>
+          <View style={styles.rightMeta}>
+            <Text>
+              Registro: <Text style={styles.metaValue}>{data.nro ?? "—"}</Text>
+            </Text>
+            <Text>
+              Colaborador:{" "}
+              <Text style={styles.metaValue}>{data.colaborador || "—"}</Text>
+            </Text>
+          </View>
         </View>
 
-        <Text style={styles.formTitle}>
-          {variant === "ap"
-            ? "Accidentes Personales Patrimoniales"
-            : "Casos Generales"}
+        <Text style={styles.headerDate}>
+          Fecha de solicitud:{" "}
+          <Text style={{ fontWeight: 500, color: C.value }}>
+            {fmtDate(data.fecha_solicitud)}
+          </Text>
         </Text>
-
-        <View style={styles.metaRow}>
-          <Text>
-            Registro:{" "}
-            <Text style={styles.metaValue}>{data.nro ?? "—"}</Text>
-          </Text>
-          <Text>
-            Colaborador:{" "}
-            <Text style={styles.metaValue}>{data.colaborador || "—"}</Text>
-          </Text>
-          <Text>
-            Fecha:{" "}
-            <Text style={styles.metaValue}>{fmtDate(data.fecha_solicitud)}</Text>
-          </Text>
-        </View>
 
         <View style={styles.divider} />
 
-        <Text style={styles.sectionTitle}>DATOS DEL SINIESTRO</Text>
-
-        <FormRowPDF label="Fecha de solicitud" value={fmtDate(data.fecha_solicitud)} />
-        <FormRowPDF label="Fecha del siniestro" value={fmtDate(data.fecha_siniestro)} />
-        {variant === "ap" ? (
-          <>
-            <FormRowPDF label="Nombre del accidentado" value={data.nombre_accidentado} />
-            <FormRowPDF label="Carnet del accidentado" value={data.carnet_accidentado} />
-          </>
-        ) : (
-          <>
-            <FormRowPDF label="Asegurado" value={data.asegurado} />
-            {data.danos_personales && (
-              <FormRowPDF label="Daños personales" value={data.danos_personales} />
-            )}
-          </>
-        )}
-        <FormRowPDF label="Solicitante" value={data.solicitante} />
-        <FormRowPDF label="Celular" value={data.celular} />
-        <FormRowPDF label="Departamento" value={data.departamento} />
-        <FormRowPDF label="Poliza" value={data.poliza} />
-        <FormRowPDF label="Direccion" value={data.direccion} last />
+        <View style={styles.gridRow}>
+          <FieldPDF
+            label="Fecha de solicitud"
+            value={fmtDate(data.fecha_solicitud)}
+          />
+          <FieldPDF
+            label="Fecha del siniestro"
+            value={fmtDate(data.fecha_siniestro)}
+          />
+          {variant === "ap" ? (
+            <>
+              <FieldPDF
+                label="Nombre del accidentado"
+                value={data.nombre_accidentado}
+              />
+              <FieldPDF
+                label="Carnet del accidentado"
+                value={data.carnet_accidentado}
+              />
+            </>
+          ) : (
+            <>
+              <FieldPDF label="Asegurado" value={data.asegurado} />
+              {data.danos_personales && (
+                <FieldPDF label="Daños personales" value={data.danos_personales} />
+              )}
+            </>
+          )}
+          <FieldPDF label="Solicitante" value={data.solicitante} />
+          <FieldPDF label="Celular" value={data.celular} />
+          <FieldPDF label="Departamento" value={data.departamento} />
+          <FieldPDF label="Poliza" value={data.poliza} />
+        </View>
+        <View style={[styles.fieldWide, { marginBottom: 0 }]}>
+          <Text style={styles.fieldLabel}>Direccion</Text>
+          <Text style={styles.fieldValue}>{data.direccion || "—"}</Text>
+        </View>
 
         {data.descripcion && (
           <>
-            <View style={styles.divider} />
-            <View style={styles.descBox}>
-              <Text style={styles.descTitle}>DESCRIPCION DEL INCIDENTE</Text>
+            <View style={[styles.divider, { marginTop: 12 }]} />
+            <View style={styles.descSection}>
+              <Text style={styles.descTitle}>
+                Descripcion del Incidente
+              </Text>
               <Text style={styles.descText}>{data.descripcion}</Text>
             </View>
           </>
@@ -231,16 +231,19 @@ export function ModernFormSheetPDF({ variant, data }: Props) {
 
         <View style={styles.divider} />
 
-        <Text style={styles.sectionTitle}>DATOS DEL EJECUTIVO</Text>
+        <Text style={styles.sectionTitle}>Datos del Ejecutivo</Text>
 
-        <FormRowPDF label="Nombre" value={data.ejecutivo_nombre} />
-        <FormRowPDF label="Celular" value={data.ejecutivo_celular} />
-        <FormRowPDF label="Intentos de llamada" value={data.intentos_llamada} />
-        <FormRowPDF label="Hubo tripartita" value={data.hubo_tripartita} />
-        <FormRowPDF label="Hora de contacto" value={data.hora_contacto} last />
+        <View style={styles.gridRow}>
+          <FieldPDF label="Nombre" value={data.ejecutivo_nombre} />
+          <FieldPDF label="Celular" value={data.ejecutivo_celular} />
+          <FieldPDF label="Intentos de llamada" value={data.intentos_llamada} />
+          <FieldPDF label="Hubo tripartita" value={data.hubo_tripartita} />
+          <FieldPDF label="Hora de contacto" value={data.hora_contacto} />
+        </View>
+
         {data.observaciones && (
-          <View style={styles.obsRow}>
-            <Text style={styles.obsLabel}>OBSERVACIONES</Text>
+          <View style={{ marginTop: 8 }}>
+            <Text style={styles.fieldLabel}>Observaciones</Text>
             <Text style={styles.obsText}>{data.observaciones}</Text>
           </View>
         )}
