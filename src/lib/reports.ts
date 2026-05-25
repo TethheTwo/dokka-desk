@@ -169,7 +169,7 @@ export async function downloadTicketPDF(ticket: Ticket) {
   ];
 
   // Fetch images antes de construir la tabla
-  const imageCache = new Map<string, string>();
+  const imageCache = new Map<string, { b64: string; w: number; h: number }>();
   await Promise.all(
     allAttachments
       .filter((a) => a.type.startsWith("image/"))
@@ -178,11 +178,44 @@ export async function downloadTicketPDF(ticket: Ticket) {
           const resp = await fetch(`${SUPABASE_URL}/storage/v1/object/ticket-attachments/${a.storage_path}`);
           if (resp.ok) {
             const blob = await resp.blob();
-            imageCache.set(a.storage_path, await blobToBase64(blob));
+            const b64 = await blobToBase64(blob);
+            const dims = await new Promise<{ w: number; h: number }>((resolve) => {
+              const img = new Image();
+              img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+              img.onerror = () => resolve({ w: 200, h: 150 });
+              img.src = b64;
+            });
+            imageCache.set(a.storage_path, { b64, ...dims });
           }
         } catch {}
       }),
   );
+
+  const imgColW = (pageW - 80) - 100 - 120;
+  const maxImgH = 140;
+
+  const buildRow = (a: TicketAttachment & { noteRef: string }) => {
+    if (!a.type.startsWith("image/")) {
+      return [
+        { content: a.noteRef },
+        { content: a.name },
+        { content: a.type },
+      ];
+    }
+    const cached = imageCache.get(a.storage_path);
+    if (!cached) return [
+      { content: a.noteRef },
+      { content: a.name },
+      { content: "(sin imagen)" },
+    ];
+    const scale = Math.min((imgColW - 6) / cached.w, maxImgH / cached.h);
+    const rowH = Math.max(cached.h * scale + 6, 30);
+    return [
+      { content: a.noteRef, styles: { minCellHeight: rowH } },
+      { content: a.name, styles: { minCellHeight: rowH } },
+      { content: "", styles: { minCellHeight: rowH } },
+    ];
+  };
 
   if (allAttachments.length > 0) {
     doc.setFontSize(13);
@@ -190,15 +223,10 @@ export async function downloadTicketPDF(ticket: Ticket) {
     doc.setTextColor(40, 40, 40);
     doc.text(`Adjuntos (${allAttachments.length})`, 40, nextY);
 
-    const maxImgH = 80;
     autoTable(doc, {
       startY: nextY + 6,
       head: [["Nota", "Archivo", "Vista previa"]],
-      body: allAttachments.map((a) => [
-        a.noteRef,
-        a.name,
-        a.type.startsWith("image/") ? "" : a.type,
-      ]),
+      body: allAttachments.map((a) => buildRow(a)),
       theme: "grid",
       headStyles: { fillColor: [47, 127, 214], textColor: 255, fontSize: 10 },
       bodyStyles: { fontSize: 9 },
@@ -211,24 +239,17 @@ export async function downloadTicketPDF(ticket: Ticket) {
         if (data.column.index === 2 && data.cell.section === "body") {
           const attach = allAttachments[data.row.index];
           if (attach && attach.type.startsWith("image/")) {
-            const b64 = imageCache.get(attach.storage_path);
-            if (b64) {
-              const pad = 3;
-              const x = data.cell.x + pad;
-              const y = data.cell.y + pad;
-              const cellW = data.cell.width - pad * 2;
-              const cellH = data.cell.height - pad * 2;
+            const cached = imageCache.get(attach.storage_path);
+            if (cached) {
+              const cellW = data.cell.width - 6;
+              const cellH = data.cell.height - 6;
+              const scale = Math.min(cellW / cached.w, cellH / cached.h);
+              const drawW = cached.w * scale;
+              const drawH = cached.h * scale;
+              const cx = data.cell.x + 3 + (cellW - drawW) / 2;
+              const cy = data.cell.y + 3 + (cellH - drawH) / 2;
               try {
-                const img = new Image();
-                img.src = b64;
-                const natW = img.naturalWidth || cellW;
-                const natH = img.naturalHeight || cellH;
-                const scale = Math.min(cellW / natW, cellH / natH, maxImgH / natH);
-                const drawW = natW * scale;
-                const drawH = natH * scale;
-                const cx = x + (cellW - drawW) / 2;
-                const cy = y + (cellH - drawH) / 2;
-                doc.addImage(b64, "JPEG" as any, cx, cy, drawW, drawH);
+                doc.addImage(cached.b64, "JPEG" as any, cx, cy, drawW, drawH);
               } catch {}
             }
           }
