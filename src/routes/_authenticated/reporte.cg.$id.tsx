@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { AppTopBar } from "@/components/AppTopBar";
-import { FormSheet, type FormReportData } from "@/components/ReportPreviewModal";
+import { ModernFormSheet, type FormReportData } from "@/components/ModernFormSheet";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/reporte/cg/$id")({
@@ -27,7 +27,7 @@ function CGPreviewPage() {
   }, [id]);
 
   return (
-    <div className="min-h-screen bg-[var(--app-bg)]">
+    <div className="min-h-screen bg-[#f7f8fa]">
       <AppTopBar />
       <main className="mx-auto max-w-5xl px-4 py-8">
         <Link
@@ -41,12 +41,9 @@ function CGPreviewPage() {
         ) : !data ? (
           <div className="text-center text-muted-foreground py-20">Reporte no encontrado.</div>
         ) : (
-          <div
-            className="bg-white shadow-lg border border-slate-300 rounded-sm overflow-hidden mx-auto"
-            style={{ width: 900, maxWidth: "100%" }}
-          >
-            <div style={{ width: 900, height: 720 }}>
-              <FormSheet variant="cg" data={data} />
+          <div className="mx-auto max-w-[560px]">
+            <div className="bg-white shadow-sm border border-gray-200 rounded-xl overflow-hidden p-[2px]">
+              <ModernFormSheet variant="cg" data={data} />
             </div>
           </div>
         )}
