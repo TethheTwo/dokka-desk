@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const MIN_INTERVAL_MS = 300_000; // 5 minutos entre cambios de email
+const MIN_INTERVAL_MS = 60_000; // 60 segundos entre cambios de email
 
 export const updateMyEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -33,8 +33,8 @@ export const updateMyEmail = createServerFn({ method: "POST" })
     // 2. Rate limiting: evitar cambios frecuentes
     const lastChange = currentProfile.updated_at ? new Date(currentProfile.updated_at).getTime() : 0;
     if (Date.now() - lastChange < MIN_INTERVAL_MS) {
-      const remaining = Math.ceil((MIN_INTERVAL_MS - (Date.now() - lastChange)) / 1000 / 60);
-      throw new Error(`Debe esperar ${remaining} minuto(s) antes de cambiar su correo nuevamente`);
+      const remaining = Math.ceil((MIN_INTERVAL_MS - (Date.now() - lastChange)) / 1000);
+      throw new Error(`Debe esperar ${remaining} segundo(s) antes de cambiar su correo nuevamente`);
     }
 
     // 3. Verificar que el email no esté en uso por otro usuario
