@@ -10,10 +10,15 @@ import dokkaLogo from "@/assets/dokka-desk-navbar.png";
 type MenuKey = "admin" | "asistencias" | "reporte" | "user" | null;
 
 export function AppTopBar() {
-  const { profile, user } = useAuth();
+  const { profile, user, roles } = useAuth();
   const { can } = usePermissions();
+  const isAdmin = roles.includes("administrador");
 
-  const showAdmin = can("view_administracion");
+  const showAdminMenu =
+    can("view_administracion") ||
+    can("view_dashboard") ||
+    can("view_auditoria") ||
+    can("view_listas");
   const showAsist = can("view_asistencias");
   const showRep = can("view_reporte");
   const showTickets = can("view_tickets");
@@ -53,14 +58,14 @@ export function AppTopBar() {
             <Link to="/" className="text-foreground hover:text-[var(--brand-blue)]">
               Inicio
             </Link>
-            {showAdmin && (
+            {showAdminMenu && (
               <NavDropdown
                 label="Administración"
                 isOpen={openMenu === "admin"}
                 onToggle={() => toggle("admin")}
               >
-                <DropdownItem to="/administracion/usuarios">Usuarios</DropdownItem>
-                <DropdownItem to="/administracion/roles">Roles</DropdownItem>
+                {isAdmin && <DropdownItem to="/administracion/usuarios">Usuarios</DropdownItem>}
+                {isAdmin && <DropdownItem to="/administracion/roles">Roles</DropdownItem>}
                 {can("view_dashboard") && (
                   <DropdownItem to="/reportes/dashboard">Dashboard</DropdownItem>
                 )}
