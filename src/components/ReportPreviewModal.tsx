@@ -155,6 +155,7 @@ export function ReportPreviewModal({
       const pdf = new (await import("jspdf")).jsPDF({
         unit: "pt",
         format: [SHEET_W, SHEET_H],
+        orientation: "landscape",
       });
       pdf.addImage(img, "PNG", 0, 0, SHEET_W, SHEET_H);
       pdf.save(`${fileBase()}.pdf`);
