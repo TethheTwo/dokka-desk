@@ -46,23 +46,42 @@ export function inRange(iso: string | null | undefined, r: DateRange): boolean {
 
 function fileSuffix(range: DateRange): string {
   const d = format(range.from, "yyyy-MM-dd");
-  if (range.label === "dia-actual" || range.label === "dia-anterior") return d;
+  if (!range.label || range.label === "dia-actual" || range.label === "dia-anterior") return d;
   return range.label;
 }
 
-/* -------------------- XLSX -------------------- */
+/* -------------------- XLSX (exceljs) -------------------- */
 
-function autosize(ws: any, rows: (string | number | null)[][]) {
-  const widths: number[] = [];
-  rows.forEach((row) => {
-    row.forEach((c, i) => {
-      const len = c == null ? 0 : String(c).length;
-      widths[i] = Math.max(widths[i] ?? 10, Math.min(60, len + 2));
-    });
-  });
-  (ws as any)["!cols"] = widths.map((w) => ({ wch: w }));
+/** Convierte un hex RGB (ej. "2F7FD6") a argb de exceljs (ej. "FF2F7FD6") */
+function a(argb: string) {
+  return `FF${argb.replace("#", "")}`;
 }
 
+/** Estilos predefinidos */
+const C = {
+  brand: a("2F7FD6"),
+  brandDark: a("1F5A99"),
+  white: a("FFFFFF"),
+  text: a("1E293B"),
+  textMuted: a("64748B"),
+  bgLight: a("F8FAFC"),
+  bgGray: a("F1F5F9"),
+  border: a("CBD5E1"),
+  green: a("16A34A"),
+  red: a("DC2626"),
+  amber: a("D97706"),
+};
+
+function borderStyle() {
+  return {
+    top: { style: "thin" as const, color: { argb: C.border } },
+    bottom: { style: "thin" as const, color: { argb: C.border } },
+    left: { style: "thin" as const, color: { argb: C.border } },
+    right: { style: "thin" as const, color: { argb: C.border } },
+  };
+}
+
+/** Helper para exportaciones simples con xlsx (AP, CG) */
 async function downloadXLSX(
   filename: string,
   sheetName: string,
@@ -72,10 +91,103 @@ async function downloadXLSX(
   const XLSX = await loadXLSX();
   const aoa = [headers, ...rows];
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-  autosize(ws, aoa);
+  const widths: number[] = [];
+  aoa.forEach((row) => {
+    row.forEach((c, i) => {
+      const len = c == null ? 0 : String(c).length;
+      widths[i] = Math.max(widths[i] ?? 10, Math.min(60, len + 2));
+    });
+  });
+  (ws as any)["!cols"] = widths.map((w) => ({ wch: w }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, sheetName.slice(0, 31));
   XLSX.writeFile(wb, filename);
+}
+
+/** Genera un blob PNG de un gráfico de barras usando canvas 2D */
+function renderChartBlob(
+  data: { label: string; value: number }[],
+  title: string,
+  barColor: string,
+): Promise<ArrayBuffer> {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement("canvas");
+    const W = 700;
+    const H = 320;
+    const DPR = 2;
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return reject(new Error("Canvas not available"));
+
+    ctx.scale(DPR, DPR);
+    const pad = { t: 30, r: 30, b: 50, l: 120 };
+    const chartW = W - pad.l - pad.r;
+    const chartH = H - pad.t - pad.b;
+    const barGap = 6;
+
+    // Fondo
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, W, H);
+
+    // Título
+    ctx.fillStyle = "#1E293B";
+    ctx.font = "bold 14px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(title, W / 2, 20);
+
+    const max = Math.max(...data.map((d) => d.value), 1);
+    const barW = Math.max(8, Math.min(50, (chartW - barGap * (data.length - 1)) / data.length));
+
+    // Eje Y (grid)
+    ctx.strokeStyle = "#E2E8F0";
+    ctx.lineWidth = 1;
+    ctx.font = "11px system-ui, sans-serif";
+    ctx.fillStyle = "#64748B";
+    ctx.textAlign = "right";
+    const gridLines = 4;
+    for (let i = 0; i <= gridLines; i++) {
+      const y = pad.t + chartH - (chartH / gridLines) * i;
+      ctx.beginPath();
+      ctx.moveTo(pad.l, y);
+      ctx.lineTo(W - pad.r, y);
+      ctx.stroke();
+      ctx.fillText(String(Math.round((max / gridLines) * i)), pad.l - 8, y + 4);
+    }
+
+    // Barras
+    data.forEach((d, i) => {
+      const barH = (d.value / max) * chartH;
+      const x = pad.l + i * (barW + barGap);
+      const y = pad.t + chartH - barH;
+
+      // Gradiente
+      const grad = ctx.createLinearGradient(x, y, x, pad.t + chartH);
+      grad.addColorStop(0, barColor);
+      grad.addColorStop(1, barColor + "88");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.roundRect(x, y, barW, barH, [3, 3, 0, 0]);
+      ctx.fill();
+
+      // Etiqueta
+      ctx.fillStyle = "#1E293B";
+      ctx.font = "10px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      const label = d.label.length > 14 ? d.label.slice(0, 13) + "…" : d.label;
+      ctx.fillText(label, x + barW / 2, H - pad.b + 16);
+
+      // Valor
+      ctx.fillStyle = "#475569";
+      ctx.font = "bold 10px system-ui, sans-serif";
+      ctx.fillText(String(d.value), x + barW / 2, y - 5);
+    });
+
+    canvas.toBlob((blob) => {
+      if (!blob) return reject(new Error("Failed to generate chart blob"));
+      resolve(blob.arrayBuffer());
+    }, "image/png");
+  });
 }
 
 /* -------------------- PDF -------------------- */
@@ -171,96 +283,160 @@ function ticketRows(tickets: Ticket[]): (string | number | null)[][] {
 }
 
 export async function exportTicketsXLSX(tickets: Ticket[], range: DateRange, user = "Usuario") {
-  const XLSX = await loadXLSX();
+  const ExcelJS = await import("exceljs");
+  const wb = new ExcelJS.Workbook();
+  wb.creator = user;
+  wb.created = new Date();
+
   const filtered = tickets.filter((t) => inRange(t.fechaCreacion, range));
+  const metaStr = `${format(range.from, "dd/MM/yyyy")} — ${format(range.to, "dd/MM/yyyy")}   •   ${format(new Date(), "dd/MM/yyyy HH:mm")}   •   Usuario: ${user}   •   Total: ${filtered.length}`;
 
-  /* ---------- Hoja 1: Registros ---------- */
-  const titleRow = ["Reporte de Tickets — DOKKA Desk"];
-  const metaRow = [
-    `Rango: ${format(range.from, "dd/MM/yyyy")} — ${format(range.to, "dd/MM/yyyy")}`,
-    `Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`,
-    `Usuario: ${user}`,
-    `Total: ${filtered.length}`,
-  ];
-  const aoa: (string | number | null)[][] = [
-    titleRow,
-    metaRow,
-    [],
-    TICKET_HEADERS,
-    ...ticketRows(filtered),
-  ];
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  autosize(ws, aoa);
+  const COL_WIDTHS = [8, 18, 22, 22, 16, 16, 16, 18, 22, 12, 16, 18, 16, 18, 10, 50, 24];
 
-  // Merges para título y meta
-  (ws as any)["!merges"] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: TICKET_HEADERS.length - 1 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: TICKET_HEADERS.length - 1 } },
-  ];
-  // Estilo título
-  const titleCell = (ws as any)[XLSX.utils.encode_cell({ r: 0, c: 0 })];
-  if (titleCell) {
-    titleCell.s = {
-      font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } },
-      fill: { fgColor: { rgb: "2F7FD6" } },
-      alignment: { horizontal: "center", vertical: "center" },
-    };
-  }
-  const metaCell = (ws as any)[XLSX.utils.encode_cell({ r: 1, c: 0 })];
-  if (metaCell) {
-    metaCell.v = metaRow.join("     •     ");
-    metaCell.s = {
-      font: { italic: true, sz: 10, color: { rgb: "475569" } },
-      fill: { fgColor: { rgb: "F1F5F9" } },
-      alignment: { horizontal: "center", vertical: "center" },
-    };
-  }
-  (ws as any)["!rows"] = [{ hpt: 28 }, { hpt: 20 }, { hpt: 8 }, { hpt: 22 }];
-  // Encabezados de tabla
-  TICKET_HEADERS.forEach((_, i) => {
-    const c = (ws as any)[XLSX.utils.encode_cell({ r: 3, c: i })];
-    if (c)
-      c.s = {
-        font: { bold: true, color: { rgb: "FFFFFF" } },
-        fill: { fgColor: { rgb: "2F7FD6" } },
-        alignment: { horizontal: "center", vertical: "center", wrapText: true },
-        border: {
-          top: { style: "thin", color: { rgb: "1F5A99" } },
-          bottom: { style: "thin", color: { rgb: "1F5A99" } },
-          left: { style: "thin", color: { rgb: "1F5A99" } },
-          right: { style: "thin", color: { rgb: "1F5A99" } },
-        },
-      };
+  // ---- Sheet 1: Registros ----
+  const ws = wb.addWorksheet("Registros");
+
+  // Row 1: Title
+  const r1 = ws.getRow(1);
+  r1.height = 34;
+  const c1 = r1.getCell(1);
+  c1.value = "Reporte de Tickets — DOKKA Desk";
+  c1.font = { bold: true, size: 16, color: { argb: C.white } };
+  c1.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.brand } };
+  c1.alignment = { horizontal: "center", vertical: "middle" };
+
+  // Row 2: Metadata
+  const r2 = ws.getRow(2);
+  r2.height = 22;
+  const c2 = r2.getCell(1);
+  c2.value = metaStr;
+  c2.font = { italic: true, size: 10, color: { argb: C.textMuted } };
+  c2.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.bgGray } };
+  c2.alignment = { horizontal: "center", vertical: "middle" };
+
+  // Row 4: Column headers
+  const r4 = ws.getRow(4);
+  r4.height = 24;
+  TICKET_HEADERS.forEach((h, i) => {
+    const cell = r4.getCell(i + 1);
+    cell.value = h;
+    cell.font = { bold: true, size: 10, color: { argb: C.white } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.brand } };
+    cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    cell.border = borderStyle();
   });
-  // Filas alternadas (zebra)
-  for (let r = 4; r < aoa.length; r++) {
-    const zebra = (r - 4) % 2 === 1;
-    for (let c = 0; c < TICKET_HEADERS.length; c++) {
-      const cell = (ws as any)[XLSX.utils.encode_cell({ r, c })];
-      if (cell)
-        cell.s = {
-          font: { sz: 10, color: { rgb: "1E293B" } },
-          fill: { fgColor: { rgb: zebra ? "F8FAFC" : "FFFFFF" } },
-          alignment: { vertical: "center", wrapText: true },
-          border: {
-            top: { style: "hair", color: { rgb: "E2E8F0" } },
-            bottom: { style: "hair", color: { rgb: "E2E8F0" } },
-            left: { style: "hair", color: { rgb: "E2E8F0" } },
-            right: { style: "hair", color: { rgb: "E2E8F0" } },
-          },
-        };
-    }
+
+  // Data rows
+  const dataRows = ticketRows(filtered);
+  dataRows.forEach((row, ri) => {
+    const exRow = ws.getRow(5 + ri);
+    exRow.height = 20;
+    const zebra = ri % 2 === 1;
+    row.forEach((val, ci) => {
+      const cell = exRow.getCell(ci + 1);
+      cell.value = val;
+      cell.font = { size: 9, color: { argb: C.text } };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: zebra ? C.bgLight : C.white },
+      };
+      cell.alignment = { vertical: "middle", wrapText: true };
+      cell.border = borderStyle();
+    });
+  });
+
+  // Merge title & meta across all columns
+  ws.mergeCells(1, 1, 1, TICKET_HEADERS.length);
+  ws.mergeCells(2, 1, 2, TICKET_HEADERS.length);
+
+  // Column widths
+  COL_WIDTHS.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+
+  // ---- Sheet 2: Resumen ----
+  const ws2 = wb.addWorksheet("Resumen");
+  let r = 1;
+
+  function addTitleRow(text: string, bg: string, fg: string, fontSize: number, bold = true) {
+    const row = ws2.getRow(r);
+    row.height = fontSize > 12 ? 32 : 22;
+    const cell = row.getCell(1);
+    cell.value = text;
+    cell.font = { bold, size: fontSize, color: { argb: fg } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
+    cell.alignment = { horizontal: "center", vertical: "middle" };
+    ws2.mergeCells(r, 1, r, 4);
+    r++;
   }
 
-  /* ---------- Hoja 2: Resumen ---------- */
-  // Tickets por tipo
+  function addSection(text: string) {
+    const row = ws2.getRow(r);
+    row.height = 24;
+    const cell = row.getCell(1);
+    cell.value = text;
+    cell.font = { bold: true, size: 12, color: { argb: C.white } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.brandDark } };
+    cell.alignment = { vertical: "middle" };
+    ws2.mergeCells(r, 1, r, 4);
+    r++;
+  }
+
+  function addHeaderRow(headers: string[]) {
+    const row = ws2.getRow(r);
+    row.height = 22;
+    headers.forEach((h, i) => {
+      const cell = row.getCell(i + 1);
+      cell.value = h;
+      cell.font = { bold: true, size: 10, color: { argb: C.text } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.bgGray } };
+      cell.alignment = { vertical: "middle", horizontal: i > 0 ? "right" : "left" };
+      cell.border = borderStyle();
+    });
+    r++;
+  }
+
+  function addDataRow(values: (string | number)[], alignRight = true) {
+    const row = ws2.getRow(r);
+    row.height = 20;
+    values.forEach((v, i) => {
+      const cell = row.getCell(i + 1);
+      cell.value = v;
+      cell.font = { size: 10, color: { argb: C.text } };
+      cell.alignment = { vertical: "middle", horizontal: i > 0 && alignRight ? "right" : "left" };
+      cell.border = borderStyle();
+    });
+    r++;
+  }
+
+  function blankRow() { r++; }
+
+  // Title
+  addTitleRow("Resumen de Tickets — DOKKA Desk", C.brand, C.white, 16);
+  const metaRow = ws2.getRow(r);
+  metaRow.height = 22;
+  const metaCell = metaRow.getCell(1);
+  metaCell.value = metaStr;
+  metaCell.font = { italic: true, size: 10, color: { argb: C.textMuted } };
+  metaCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.bgGray } };
+  metaCell.alignment = { horizontal: "center", vertical: "middle" };
+  ws2.mergeCells(r, 1, r, 4);
+  r++;
+  blankRow();
+
+  // ---- Tickets por tipo ----
   const tipoMap = new Map<string, number>();
   filtered.forEach((t) => tipoMap.set(t.tipo, (tipoMap.get(t.tipo) ?? 0) + 1));
-  const porTipo = Array.from(tipoMap, ([k, v]) => [k, v] as [string, number]).sort(
-    (a, b) => b[1] - a[1],
+  const porTipo = Array.from(tipoMap, ([k, v]) => ({ label: k, value: v })).sort(
+    (a, b) => b.value - a.value,
   );
 
-  // Tickets cerrados por usuario asignado
+  addSection("Tickets por tipo");
+  addHeaderRow(["Tipo", "Cantidad", "", ""]);
+  porTipo.forEach((d) => addDataRow([d.label, d.value, "", ""]));
+  if (porTipo.length === 0) addDataRow(["—", 0, "", ""]);
+  blankRow();
+
+  // ---- Tickets cerrados por usuario ----
   const userMap = new Map<string, number>();
   filtered.forEach((t) => {
     if (t.estado !== "Cerrado") return;
@@ -268,11 +444,17 @@ export async function exportTicketsXLSX(tickets: Ticket[], range: DateRange, use
     if (!k || k === "-") return;
     userMap.set(k, (userMap.get(k) ?? 0) + 1);
   });
-  const porUsuario = Array.from(userMap, ([k, v]) => [k, v] as [string, number]).sort(
-    (a, b) => b[1] - a[1],
+  const porUsuario = Array.from(userMap, ([k, v]) => ({ label: k, value: v })).sort(
+    (a, b) => b.value - a.value,
   );
 
-  // Tendencia diaria — todos los días del rango
+  addSection("Tickets cerrados por usuario asignado");
+  addHeaderRow(["Usuario", "Cantidad", "", ""]);
+  porUsuario.forEach((d) => addDataRow([d.label, d.value, "", ""]));
+  if (porUsuario.length === 0) addDataRow(["—", 0, "", ""]);
+  blankRow();
+
+  // ---- Tendencia diaria ----
   const dayMap = new Map<string, number>();
   const ms = 24 * 60 * 60 * 1000;
   for (
@@ -280,137 +462,57 @@ export async function exportTicketsXLSX(tickets: Ticket[], range: DateRange, use
     d <= range.to;
     d = new Date(d.getTime() + ms)
   ) {
-    dayMap.set(format(d, "dd/MM/yyyy"), 0);
+    dayMap.set(format(d, "dd/MM"), 0);
   }
   filtered.forEach((t) => {
-    const k = format(new Date(t.fechaCreacion), "dd/MM/yyyy");
+    const k = format(new Date(t.fechaCreacion), "dd/MM");
     if (dayMap.has(k)) dayMap.set(k, (dayMap.get(k) ?? 0) + 1);
   });
-  const tendencia = Array.from(dayMap, ([k, v]) => [k, v] as [string, number]);
+  const tendenciaData = Array.from(dayMap, ([k, v]) => ({ label: k, value: v }));
 
-  // Construcción visual de la hoja Resumen con "mini-barras" de bloques ▰
-  const maxBar = 24;
-  const makeBar = (v: number, max: number) => {
-    if (max === 0) return "";
-    const n = Math.max(1, Math.round((v / max) * maxBar));
-    return "▰".repeat(n);
-  };
-  const maxTipo = Math.max(1, ...porTipo.map(([, v]) => v));
-  const maxUser = Math.max(1, ...porUsuario.map(([, v]) => v));
-  const maxDay = Math.max(1, ...tendencia.map(([, v]) => v));
+  addSection("Tendencia diaria");
+  addHeaderRow(["Fecha", "Cantidad", "", ""]);
+  tendenciaData.forEach((d) => addDataRow([d.label, d.value, "", ""]));
 
-  const sum: (string | number)[][] = [];
-  sum.push(["Resumen de Tickets — DOKKA Desk"]);
-  sum.push([
-    `Rango: ${format(range.from, "dd/MM/yyyy")} — ${format(range.to, "dd/MM/yyyy")}   •   Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}   •   Usuario: ${user}`,
-  ]);
-  sum.push([]);
-  sum.push(["Tickets por tipo", "", ""]);
-  sum.push(["Tipo", "Cantidad", "Gráfico"]);
-  porTipo.forEach(([k, v]) => sum.push([k, v, makeBar(v, maxTipo)]));
-  if (porTipo.length === 0) sum.push(["—", 0, ""]);
-  sum.push([]);
-  sum.push(["Tickets cerrados por usuario asignado", "", ""]);
-  sum.push(["Usuario", "Cantidad", "Gráfico"]);
-  porUsuario.forEach(([k, v]) => sum.push([k, v, makeBar(v, maxUser)]));
-  if (porUsuario.length === 0) sum.push(["—", 0, ""]);
-  sum.push([]);
-  sum.push(["Tendencia diaria", "", ""]);
-  sum.push(["Fecha", "Cantidad", "Gráfico"]);
-  tendencia.forEach(([k, v]) => sum.push([k, v, makeBar(v, maxDay)]));
+  // Column widths for Resumen
+  ws2.getColumn(1).width = 36;
+  ws2.getColumn(2).width = 14;
+  ws2.getColumn(3).width = 24;
+  ws2.getColumn(4).width = 24;
 
-  const ws2 = XLSX.utils.aoa_to_sheet(sum);
-  (ws2 as any)["!cols"] = [{ wch: 36 }, { wch: 14 }, { wch: 36 }];
-  (ws2 as any)["!merges"] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: 2 } },
-  ];
-
-  const styleTitle = (row: number, bg = "2F7FD6", fg = "FFFFFF", sz = 14, bold = true) => {
-    for (let c = 0; c < 3; c++) {
-      const cell = (ws2 as any)[XLSX.utils.encode_cell({ r: row, c })];
-      if (cell)
-        cell.s = {
-          font: { bold, sz, color: { rgb: fg } },
-          fill: { fgColor: { rgb: bg } },
-          alignment: { horizontal: c === 0 ? "center" : "left", vertical: "center" },
-        };
+  // ---- Embed chart images ----
+  try {
+    if (porTipo.length > 0) {
+      const chartBuf = await renderChartBlob(porTipo, "Tickets por tipo", "#2F7FD6");
+      const imgId = wb.addImage({ buffer: chartBuf as any, extension: "png" });
+      ws2.addImage(imgId, { tl: { col: 4.5, row: 0 }, ext: { width: 700, height: 320 } });
     }
-  };
-  const styleSection = (row: number) => {
-    for (let c = 0; c < 3; c++) {
-      const cell = (ws2 as any)[XLSX.utils.encode_cell({ r: row, c })];
-      if (cell)
-        cell.s = {
-          font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } },
-          fill: { fgColor: { rgb: "1F5A99" } },
-          alignment: { vertical: "center" },
-        };
+    if (porUsuario.length > 0) {
+      const chartBuf2 = await renderChartBlob(porUsuario, "Cerrados por usuario", "#16A34A");
+      const imgId2 = wb.addImage({ buffer: chartBuf2 as any, extension: "png" });
+      const startR = porTipo.length > 0 ? 0 : 0;
+      ws2.addImage(imgId2, {
+        tl: { col: 4.5, row: porTipo.length > 0 ? 13 : 5 },
+        ext: { width: 700, height: 320 },
+      });
     }
-    (ws2 as any)["!merges"]!.push({ s: { r: row, c: 0 }, e: { r: row, c: 2 } });
-  };
-  const styleHeader = (row: number) => {
-    for (let c = 0; c < 3; c++) {
-      const cell = (ws2 as any)[XLSX.utils.encode_cell({ r: row, c })];
-      if (cell)
-        cell.s = {
-          font: { bold: true, sz: 10, color: { rgb: "1E293B" } },
-          fill: { fgColor: { rgb: "E2E8F0" } },
-          alignment: { vertical: "center", horizontal: c === 1 ? "right" : "left" },
-        };
-    }
-  };
-  const styleBarRow = (row: number) => {
-    for (let c = 0; c < 3; c++) {
-      const cell = (ws2 as any)[XLSX.utils.encode_cell({ r: row, c })];
-      if (cell)
-        cell.s = {
-          font: { sz: 10, color: c === 2 ? { rgb: "2F7FD6" } : { rgb: "1E293B" } },
-          alignment: { vertical: "center", horizontal: c === 1 ? "right" : "left" },
-        };
-    }
-  };
-
-  styleTitle(0, "2F7FD6", "FFFFFF", 16, true);
-  styleTitle(1, "F1F5F9", "475569", 10, false);
-
-  // Locate section rows
-  let cursor = 3;
-  // Por tipo
-  styleSection(cursor);
-  cursor++;
-  styleHeader(cursor);
-  cursor++;
-  const tipoCount = Math.max(porTipo.length, 1);
-  for (let i = 0; i < tipoCount; i++) {
-    styleBarRow(cursor++);
-  }
-  cursor++; // blank
-  // Por usuario
-  styleSection(cursor);
-  cursor++;
-  styleHeader(cursor);
-  cursor++;
-  const userCount = Math.max(porUsuario.length, 1);
-  for (let i = 0; i < userCount; i++) {
-    styleBarRow(cursor++);
-  }
-  cursor++; // blank
-  // Tendencia
-  styleSection(cursor);
-  cursor++;
-  styleHeader(cursor);
-  cursor++;
-  for (let i = 0; i < tendencia.length; i++) {
-    styleBarRow(cursor++);
+  } catch {
+    // Charts are a nice-to-have; silently fall back if canvas fails
   }
 
-  (ws2 as any)["!rows"] = [{ hpt: 26 }, { hpt: 20 }];
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Registros");
-  XLSX.utils.book_append_sheet(wb, ws2, "Resumen");
-  XLSX.writeFile(wb, `tickets_${fileSuffix(range)}.xlsx`);
+  // Descargar
+  const buffer = (await wb.xlsx.writeBuffer()) as ArrayBuffer;
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `tickets_${fileSuffix(range)}.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 export async function exportTicketsPDF(tickets: Ticket[], range: DateRange, user: string) {
