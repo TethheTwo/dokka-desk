@@ -88,13 +88,26 @@ def build_sheet(ws, sheet_def: dict, styles: dict):
                    fill_color=styles["brand"], alignment={"horizontal": "center", "vertical": "center"})
 
     # Metadata row
+    meta_row = title_row_num
+    if title:
+        meta_row += 1
     if metadata:
-        r = meta_row_num
-        ws.row_dimensions[r].height = 22
-        cell = ws.cell(row=r, column=1)
+        ws.row_dimensions[meta_row].height = 22
+        cell = ws.cell(row=meta_row, column=1)
         apply_cell(cell, metadata, font_kwargs={"italic": True, "size": 10, "color": styles["text_muted"]},
                    fill_color=styles.get("bg_gray", "F1F5F9"),
                    alignment={"horizontal": "center", "vertical": "center"})
+        meta_row += 1
+
+    # Second metadata row
+    metadata2 = sheet_def.get("metadata2")
+    if metadata2:
+        ws.row_dimensions[meta_row].height = 22
+        cell = ws.cell(row=meta_row, column=1)
+        apply_cell(cell, metadata2, font_kwargs={"italic": True, "size": 10, "color": styles["text_muted"]},
+                   fill_color=styles.get("bg_gray", "F1F5F9"),
+                   alignment={"horizontal": "center", "vertical": "center"})
+        meta_row += 1
 
     # Determine if using blocks or flat table
     blocks = sheet_def.get("blocks")
@@ -103,6 +116,8 @@ def build_sheet(ws, sheet_def: dict, styles: dict):
     if title:
         current_row += 1
     if metadata:
+        current_row += 1
+    if metadata2:
         current_row += 1
 
     if blocks:
@@ -117,8 +132,11 @@ def build_sheet(ws, sheet_def: dict, styles: dict):
             ws.merge_cells(start_row=title_row_num, start_column=1,
                            end_row=title_row_num, end_column=max_cols)
         if metadata and max_cols > 1:
-            ws.merge_cells(start_row=meta_row_num, start_column=1,
-                           end_row=meta_row_num, end_column=max_cols)
+            ws.merge_cells(start_row=title_row_num + 1, start_column=1,
+                           end_row=title_row_num + 1, end_column=max_cols)
+        if metadata2 and max_cols > 1:
+            ws.merge_cells(start_row=title_row_num + 2, start_column=1,
+                           end_row=title_row_num + 2, end_column=max_cols)
 
         # Build from blocks (Dashboard Resumen style)
         for block in blocks:
@@ -251,7 +269,7 @@ def build_charts(wb, chart_defs: list, sheets_map: dict):
 
         if chart_type == "bar":
             chart = BarChart()
-            chart.type = "col"
+            chart.type = "bar"
         elif chart_type == "line":
             chart = LineChart()
         elif chart_type == "pie":
@@ -262,10 +280,19 @@ def build_charts(wb, chart_defs: list, sheets_map: dict):
         chart.title = title
         chart.style = 2
 
-        if chart_type != "pie" and y_title:
-            chart.y_axis.title = y_title
-        if chart_type != "pie" and x_title:
-            chart.x_axis.title = x_title
+        if chart_type == "pie":
+            pass
+        elif chart_type == "bar":
+            # Horizontal bars: x_title (values) on X-axis, y_title (categories) on Y-axis
+            if x_title:
+                chart.x_axis.title = x_title
+            if y_title:
+                chart.y_axis.title = y_title
+        else:
+            if x_title:
+                chart.x_axis.title = x_title
+            if y_title:
+                chart.y_axis.title = y_title
 
         try:
             data = Reference(ws,
@@ -296,13 +323,11 @@ def build_charts(wb, chart_defs: list, sheets_map: dict):
                     pt.graphicalProperties.solidFill = hex_to_rgb(CHART_COLORS[pi % len(CHART_COLORS)])
                     pts.append(pt)
                 chart.series[0].data_points = pts
-                chart.series[0].dLbls = DataLabelList(showVal=True)
         else:
             chart.add_data(data, titles_from_data=False)
             chart.set_categories(cats)
             if chart.series and num_pts > 0:
                 chart.series[0].tx = SeriesLabel(v=series_name)
-                chart.series[0].dLbls = DataLabelList(showVal=True)
                 pts = []
                 for pi in range(num_pts):
                     pt = ChartDataPoint(idx=pi)
