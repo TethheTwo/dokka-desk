@@ -304,14 +304,14 @@ function GenericSheet({
         style={{ borderColor: "#2f7fd6" }}
       >
         <div>
-          <div className="text-[10px] font-semibold tracking-widest uppercase" style={{ color: "#2f7fd6" }}>
+          <div className="text-[12px] font-semibold tracking-widest uppercase" style={{ color: "#2f7fd6" }}>
             DOKKA Desk
           </div>
           <h2 className="text-xl font-bold leading-tight">{title}</h2>
-          {subtitle && <div className="text-[11px] text-slate-500 mt-0.5">{subtitle}</div>}
+          {subtitle && <div className="text-[13px] text-slate-500 mt-0.5">{subtitle}</div>}
         </div>
         <div className="text-right">
-          <div className="text-[10px] uppercase tracking-wider text-slate-500">Reporte N°</div>
+          <div className="text-[12px] uppercase tracking-wider text-slate-500">Reporte N°</div>
           <div className="text-2xl font-bold leading-none" style={{ color: "#2f7fd6" }}>
             {nro}
           </div>
@@ -320,16 +320,16 @@ function GenericSheet({
       <div className="flex-1 grid grid-cols-2 gap-2 content-start">
         {sections.map((s, i) => (
           <div key={i} className="border border-slate-300 rounded-sm overflow-hidden">
-            <div className="bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-300">
+            <div className="bg-slate-100 px-2 py-1 text-[12px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-300">
               {s.title}
             </div>
             <div className="grid grid-cols-2 gap-x-2 gap-y-1 p-2">
               {s.fields.map((f, j) => (
                 <div key={j} className={f.full ? "col-span-2" : ""}>
-                  <div className="text-[9px] uppercase tracking-wide text-slate-500 font-semibold leading-tight">
+                  <div className="text-[13px] uppercase tracking-wide text-slate-500 font-semibold leading-tight">
                     {f.label}
                   </div>
-                  <div className="text-[11px] text-slate-900 break-words whitespace-pre-wrap leading-snug">
+                  <div className="text-[13px] text-slate-900 break-words whitespace-pre-wrap leading-snug">
                     {f.value === null || f.value === undefined || f.value === ""
                       ? "—"
                       : String(f.value)}

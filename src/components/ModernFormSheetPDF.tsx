@@ -24,7 +24,7 @@ const styles = StyleSheet.create({
   page: {
     padding: 28,
     fontFamily: "Helvetica",
-    fontSize: 9,
+    fontSize: 11,
     color: C.value,
   },
   accent: {
@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   formCode: {
-    fontSize: 9,
+    fontSize: 11,
     color: C.label,
     fontWeight: 500,
     letterSpacing: 0.5,
@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
   },
   rightMeta: {
     textAlign: "right" as const,
-    fontSize: 9,
+    fontSize: 11,
     color: C.label,
     lineHeight: 1.6,
   },
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     color: C.value,
   },
   headerDate: {
-    fontSize: 9,
+    fontSize: 11,
     color: C.label,
     marginBottom: 14,
   },
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: 600,
     color: C.label,
     letterSpacing: 0.5,
@@ -82,12 +82,12 @@ const styles = StyleSheet.create({
     width: "50%",
   },
   fieldLabel: {
-    fontSize: 9,
+    fontSize: 11,
     color: C.label,
     fontWeight: 500,
   },
   fieldValue: {
-    fontSize: 12,
+    fontSize: 14,
     color: C.value,
     fontWeight: 500,
     marginTop: 1,
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   descTitle: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: 600,
     color: C.label,
     letterSpacing: 0.5,
@@ -104,13 +104,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   descText: {
-    fontSize: 11,
+    fontSize: 13,
     color: C.text,
     lineHeight: 1.5,
     marginBottom: 10,
   },
   obsText: {
-    fontSize: 11,
+    fontSize: 13,
     color: C.text,
     lineHeight: 1.5,
     marginTop: 1,
