@@ -287,7 +287,7 @@ def build_charts(wb, chart_defs: list, sheets_map: dict):
 
         if chart_type == "bar":
             chart = BarChart()
-            chart.type = "bar"
+            chart.type = "col"  # vertical bars
         elif chart_type == "line":
             chart = LineChart()
         elif chart_type == "pie":
@@ -297,6 +297,7 @@ def build_charts(wb, chart_defs: list, sheets_map: dict):
 
         chart.title = title
 
+        # Axis titles
         if chart_type == "pie":
             pass
         elif chart_type == "bar":
@@ -334,12 +335,27 @@ def build_charts(wb, chart_defs: list, sheets_map: dict):
         else:
             chart.legend.position = "b"
 
-        # Plot area background (light gray)
+        # Plot area: white background
         try:
-            gp = GraphicalProperties(solidFill="F2F2F2")
+            gp = GraphicalProperties(solidFill="FFFFFF")
             chart.plot_area.graphicalProperties = gp
         except Exception:
             pass
+
+        # Y axis: start at zero
+        try:
+            chart.y_axis.scaling.min = 0
+        except Exception:
+            pass
+
+        # Bar-specific styling
+        if chart_type == "bar":
+            chart.gapWidth = 180
+            # Remove legend auto-title overlay
+            try:
+                chart.legend.overlay = False
+            except Exception:
+                pass
 
         # Data & categories
         if chart_type == "pie":
@@ -362,7 +378,7 @@ def build_charts(wb, chart_defs: list, sheets_map: dict):
                 if ch.get("show_labels", True):
                     chart.series[0].dLbls = DataLabelList(showVal=True)
 
-                # Per-point colors
+                # Per-point colors (varyColors equivalent)
                 pts = []
                 for pi in range(num_pts):
                     pt = ChartDataPoint(idx=pi)
@@ -370,7 +386,7 @@ def build_charts(wb, chart_defs: list, sheets_map: dict):
                     pts.append(pt)
                 chart.series[0].data_points = pts
 
-                # Line-specific: markers
+                # Line-specific
                 if chart_type == "line":
                     chart.series[0].marker.symbol = "circle"
                     chart.series[0].marker.size = 5
@@ -381,15 +397,9 @@ def build_charts(wb, chart_defs: list, sheets_map: dict):
         row_num = pos.get("row", 5)
         anchor = f"{col_letter}{row_num}"
 
-        # 2:1 aspect ratio
-        chart.width = ch.get("width", 22)
-        chart.height = ch.get("height", 11)
-
-        # Remove auto-title from legend if data labels show values
-        try:
-            chart.legend.overlay = False
-        except Exception:
-            pass
+        # Panoramic 2:1 ratio (per spec: width 15, height 7.5)
+        chart.width = ch.get("width", 15)
+        chart.height = ch.get("height", 7.5)
 
         ws.add_chart(chart, anchor)
 
