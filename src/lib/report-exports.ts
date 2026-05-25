@@ -105,6 +105,7 @@ interface ExportChart {
   series_name?: string;
   width?: number;
   height?: number;
+  show_labels?: boolean;
 }
 
 interface ExportPayload {
@@ -347,6 +348,7 @@ export async function exportDashboardXLSX(tickets: Ticket[], range: DateRange, u
       x_title: "Fecha",
       series_name: "Tendencia",
       height: 10,
+      show_labels: false,
     });
   }
 
