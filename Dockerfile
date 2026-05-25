@@ -14,11 +14,13 @@ RUN bun run build
 
 # Final image
 FROM base AS release
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y curl python3 python3-pip && rm -rf /var/lib/apt/lists/* && \
+    pip3 install openpyxl --break-system-packages --no-cache-dir
 COPY --from=install /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/server-entry.js ./server-entry.js
+COPY --from=build /app/scripts ./scripts
 COPY entrypoint.sh /entrypoint.sh
 
 EXPOSE 3000
