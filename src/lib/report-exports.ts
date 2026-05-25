@@ -257,7 +257,7 @@ export async function exportDashboardXLSX(tickets: Ticket[], range: DateRange, u
   blocks.push({ type: "section", title: "Tickets por tipo" });
   const tipoHeader: string[] = ["Tipo", "Cantidad"];
   const tipoRows =
-    porTipo.length > 0 ? porTipo.map(([l, v]) => [l, v, "", ""]) : [["—", 0, "", ""]];
+    porTipo.length > 0 ? porTipo.map(([l, v]) => [l, v]) : [["—", 0]];
   blocks.push({ type: "table", headers: tipoHeader, rows: tipoRows });
 
   // Row calculations for chart data references
@@ -273,7 +273,7 @@ export async function exportDashboardXLSX(tickets: Ticket[], range: DateRange, u
   blocks.push({ type: "section", title: "Tickets cerrados por usuario asignado" });
   const userHeader: string[] = ["Usuario", "Cantidad"];
   const userRows =
-    porUsuario.length > 0 ? porUsuario.map(([l, v]) => [l, v, "", ""]) : [["—", 0, "", ""]];
+    porUsuario.length > 0 ? porUsuario.map(([l, v]) => [l, v]) : [["—", 0]];
   blocks.push({ type: "table", headers: userHeader, rows: userRows });
 
   let userDataStart = 0;
@@ -287,7 +287,7 @@ export async function exportDashboardXLSX(tickets: Ticket[], range: DateRange, u
   blocks.push({ type: "blank", height: 4 });
   blocks.push({ type: "section", title: "Tendencia diaria" });
   const tendHeader: string[] = ["Fecha", "Cantidad"];
-  const tendRows = tendencia.map(([l, v]) => [l, v, "", ""]);
+  const tendRows = tendencia.map(([l, v]) => [l, v]);
   blocks.push({ type: "table", headers: tendHeader, rows: tendRows });
 
   let tendDataStart = 0;
@@ -307,7 +307,7 @@ export async function exportDashboardXLSX(tickets: Ticket[], range: DateRange, u
       sheet: "Resumen",
       data: { min_col: 2, min_row: tipoDataStart, max_col: 2, max_row: tipoDataEnd },
       cats: { min_col: 1, min_row: tipoDataStart, max_col: 1, max_row: tipoDataEnd },
-      position: { col: 5, row: 5 },
+      position: { col: 3, row: 5 },
       color: "2F7FD6",
       y_title: "Cantidad",
       x_title: "Tipo",
@@ -322,11 +322,26 @@ export async function exportDashboardXLSX(tickets: Ticket[], range: DateRange, u
       sheet: "Resumen",
       data: { min_col: 2, min_row: userDataStart, max_col: 2, max_row: userDataEnd },
       cats: { min_col: 1, min_row: userDataStart, max_col: 1, max_row: userDataEnd },
-      position: { col: 5, row: userDataStart > 10 ? 16 : 12 },
+      position: { col: 3, row: 40 },
       color: "16A34A",
       y_title: "Cantidad",
       x_title: "Usuario",
       series_name: "Cerrados",
+    });
+  }
+
+  if (tendDataStart > 0) {
+    charts.push({
+      type: "line",
+      title: "Tendencia diaria",
+      sheet: "Resumen",
+      data: { min_col: 2, min_row: tendDataStart, max_col: 2, max_row: tendDataEnd },
+      cats: { min_col: 1, min_row: tendDataStart, max_col: 1, max_row: tendDataEnd },
+      position: { col: 3, row: 75 },
+      color: "D97706",
+      y_title: "Cantidad",
+      x_title: "Fecha",
+      series_name: "Tendencia",
     });
   }
 
@@ -345,7 +360,7 @@ export async function exportDashboardXLSX(tickets: Ticket[], range: DateRange, u
         name: "Resumen",
         title: "Resumen de Tickets — DOKKA Desk",
         metadata: metaStr,
-        col_widths: [36, 14, 24, 24],
+        col_widths: [36, 14],
         blocks,
       },
     ],
