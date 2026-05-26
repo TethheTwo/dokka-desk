@@ -1,8 +1,8 @@
 # DOKKA Desk — Guía de Producción
 
-> Análisis completo del stack, infraestructura requerida, configuración en contenedor
-> Proxmox (CT 103), conflictos de puertos, requisitos, y todo lo necesario para un
-> despliegue en producción real.
+> Análisis completo del stack, infraestructura requerida, configuración Docker,
+> conflictos de puertos, requisitos, y todo lo necesario para un despliegue
+> en producción real independientemente de la infraestructura.
 
 ---
 
