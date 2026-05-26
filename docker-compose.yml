@@ -49,7 +49,7 @@ services:
     environment:
       GOTRUE_API_HOST: 0.0.0.0
       GOTRUE_API_PORT: 9999
-      API_EXTERNAL_URL: http://localhost:8000/auth/v1
+      API_EXTERNAL_URL: ${SITE_URL:-http://localhost:3000}/auth/v1
       GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
       GOTRUE_MAILER_AUTOCONFIRM: "true"
       GOTRUE_DB_DRIVER: postgres
@@ -91,7 +91,8 @@ services:
       SUPABASE_URL: http://localhost:3000
       SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
-      VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-http://localhost:8000}
+      SITE_URL: ${SITE_URL:-http://localhost:3000}
+      VITE_SUPABASE_URL: ${SITE_URL:-http://localhost:3000}
       VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY:-${SUPABASE_PUBLISHABLE_KEY}}
     depends_on:
       - kong
