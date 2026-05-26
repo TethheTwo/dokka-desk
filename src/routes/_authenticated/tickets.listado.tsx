@@ -397,6 +397,7 @@ function TicketDetailModal({
   const [estado, setEstado] = useState<Estado>(initialEstado);
   const [noteText, setNoteText] = useState("");
   const [noteFiles, setNoteFiles] = useState<File[]>([]);
+  const [sending, setSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -406,24 +407,29 @@ function TicketDetailModal({
   };
 
   const handleSend = async () => {
-    if (locked) return;
+    if (sending || locked) return;
     if (!noteText.trim() && noteFiles.length === 0) {
       toast.error("Escribe una nota o adjunta un archivo", { duration: 3000 });
       return;
     }
-    const usuario = currentUser.username || currentUser.name || "Usuario";
-    await addTicketNote(ticket.nro, {
-      estado,
-      nota: noteText.trim(),
-      usuario,
-      attachments: noteFiles,
-    });
-    if (estado !== ticket.estado) await updateTicketEstado(ticket.nro, estado, usuario);
-    const updated = getTickets().find((t) => t.nro === ticket.nro);
-    if (updated) onChanged(updated);
-    setNoteText("");
-    setNoteFiles([]);
-    toast.success("Nota agregada", { duration: 3000 });
+    setSending(true);
+    try {
+      const usuario = currentUser.username || currentUser.name || "Usuario";
+      await addTicketNote(ticket.nro, {
+        estado,
+        nota: noteText.trim(),
+        usuario,
+        attachments: noteFiles,
+      });
+      if (estado !== ticket.estado) await updateTicketEstado(ticket.nro, estado, usuario);
+      const updated = getTickets().find((t) => t.nro === ticket.nro);
+      if (updated) onChanged(updated);
+      setNoteText("");
+      setNoteFiles([]);
+      toast.success("Nota agregada", { duration: 3000 });
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -567,7 +573,7 @@ function TicketDetailModal({
                 <button
                   type="button"
                   onClick={handleSend}
-                  disabled={locked}
+                  disabled={sending || locked}
                   className="inline-flex items-center gap-1.5 h-8 px-3 rounded text-white text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{ backgroundColor: "var(--brand-blue, #2f7fd6)" }}
                 >
