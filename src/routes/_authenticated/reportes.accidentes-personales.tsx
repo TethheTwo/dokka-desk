@@ -77,6 +77,8 @@ function APPage() {
   const [toDelete, setToDelete] = useState<Row | null>(null);
   const [toShare, setToShare] = useState<Row | null>(null);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
   const ejecutivos = useMasterList("ejecutivos");
 
   const colaborador = profile?.full_name || profile?.username || user?.email || "";
@@ -119,6 +121,10 @@ function APPage() {
   useEffect(() => {
     void load();
   }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
 
   const onEjecutivo = (label: string) => {
     const it = ejecutivos.find((e) => e.label === label);
@@ -178,6 +184,10 @@ function APPage() {
         .includes(q),
     );
   }, [rows, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <div className="min-h-screen bg-[var(--app-bg)] text-foreground">
@@ -239,7 +249,7 @@ function APPage() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((r) => {
+                paged.map((r) => {
                   const d = r.created_at ? new Date(r.created_at) : null;
                   return (
                     <tr
@@ -295,6 +305,23 @@ function APPage() {
             </tbody>
           </table>
         </div>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`h-8 min-w-8 px-2 rounded-md text-sm transition-colors ${
+                  p === currentPage
+                    ? "bg-[var(--brand-blue)] text-white"
+                    : "text-foreground hover:bg-muted"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        )}
       </main>
 
       <Dialog open={open} onOpenChange={setOpen}>
