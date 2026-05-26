@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { AppTopBar } from "@/components/AppTopBar";
 import { DownloadMenu } from "@/components/DownloadMenu";
@@ -7,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { exportAuditXLSX, type AuditRow as AuditRowExport } from "@/lib/report-exports";
 import { formatCode } from "@/lib/utils";
+import { getPaginationItems } from "@/lib/pagination";
 
 export const Route = createFileRoute("/_authenticated/reportes/auditoria")({
   head: () => ({
@@ -284,35 +286,44 @@ function AuditoriaPage() {
 
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-1 pt-2">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="h-8 px-3 rounded-md text-sm border border-input hover:bg-muted disabled:opacity-40"
-                >
-                  Anterior
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter((p) => Math.abs(p - currentPage) <= 2 || p === 1 || p === totalPages)
-                  .map((p, idx, arr) => (
-                    <span key={p} className="flex items-center">
-                      {idx > 0 && arr[idx - 1] !== p - 1 && (
-                        <span className="px-1 text-muted-foreground">…</span>
-                      )}
+                {getPaginationItems(currentPage, totalPages).map((item, i) => {
+                  if (item.type === "prev") {
+                    return (
                       <button
-                        onClick={() => setPage(p)}
-                        className={`h-8 min-w-8 px-2 rounded-md text-sm transition-colors ${p === currentPage ? "bg-[var(--brand-blue)] text-white" : "text-foreground hover:bg-muted"}`}
+                        key="prev"
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={item.disabled}
+                        className="h-8 min-w-8 px-2 rounded-md text-sm border border-input hover:bg-muted disabled:opacity-40 flex items-center justify-center"
                       >
-                        {p}
+                        <ChevronLeft className="h-4 w-4" />
                       </button>
-                    </span>
-                  ))}
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="h-8 px-3 rounded-md text-sm border border-input hover:bg-muted disabled:opacity-40"
-                >
-                  Siguiente
-                </button>
+                    );
+                  }
+                  if (item.type === "next") {
+                    return (
+                      <button
+                        key="next"
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={item.disabled}
+                        className="h-8 min-w-8 px-2 rounded-md text-sm border border-input hover:bg-muted disabled:opacity-40 flex items-center justify-center"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    );
+                  }
+                  if (item.type === "ellipsis") {
+                    return <span key={"e" + i} className="px-1 text-muted-foreground select-none">…</span>;
+                  }
+                  return (
+                    <button
+                      key={item.page}
+                      onClick={() => setPage(item.page)}
+                      className={`h-8 min-w-8 px-2 rounded-md text-sm transition-colors ${item.page === currentPage ? "bg-[var(--brand-blue)] text-white" : "text-foreground hover:bg-muted"}`}
+                    >
+                      {item.page}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

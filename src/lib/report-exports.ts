@@ -244,10 +244,10 @@ export async function exportDashboardXLSX(tickets: Ticket[], range: DateRange, u
     d <= range.to;
     d = new Date(d.getTime() + ms)
   ) {
-    dayMap.set(format(d, "dd/MM"), 0);
+    dayMap.set(format(d, "dd/MM/yy"), 0);
   }
   filtered.forEach((t) => {
-    const k = format(new Date(t.fechaCreacion), "dd/MM");
+    const k = format(new Date(t.fechaCreacion), "dd/MM/yy");
     if (dayMap.has(k)) dayMap.set(k, (dayMap.get(k) ?? 0) + 1);
   });
   const tendencia = Array.from(dayMap, ([k, v]) => [k, v] as const);

@@ -2,6 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Eye,
   Trash2,
   X,
@@ -35,6 +37,7 @@ import { AppTopBar } from "@/components/AppTopBar";
 import { PageHeader } from "@/components/PageHeader";
 import { usePermissions } from "@/lib/permissions";
 import { formatCode } from "@/lib/utils";
+import { getPaginationItems } from "@/lib/pagination";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -311,15 +314,44 @@ function TicketsCard() {
           </div>
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-1 px-4 py-3 border-t border-border">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  className={`h-8 min-w-8 px-2 rounded-md text-sm transition-colors ${p === currentPage ? "bg-[var(--brand-blue)] text-white" : "text-foreground hover:bg-muted"}`}
-                >
-                  {p}
-                </button>
-              ))}
+              {getPaginationItems(currentPage, totalPages).map((item, i) => {
+                if (item.type === "prev") {
+                  return (
+                    <button
+                      key="prev"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={item.disabled}
+                      className="h-8 min-w-8 px-2 rounded-md text-sm border border-input hover:bg-muted disabled:opacity-40 flex items-center justify-center"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                  );
+                }
+                if (item.type === "next") {
+                  return (
+                    <button
+                      key="next"
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={item.disabled}
+                      className="h-8 min-w-8 px-2 rounded-md text-sm border border-input hover:bg-muted disabled:opacity-40 flex items-center justify-center"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  );
+                }
+                if (item.type === "ellipsis") {
+                  return <span key={"e" + i} className="px-1 text-muted-foreground select-none">…</span>;
+                }
+                return (
+                  <button
+                    key={item.page}
+                    onClick={() => setPage(item.page)}
+                    className={`h-8 min-w-8 px-2 rounded-md text-sm transition-colors ${item.page === currentPage ? "bg-[var(--brand-blue)] text-white" : "text-foreground hover:bg-muted"}`}
+                  >
+                    {item.page}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

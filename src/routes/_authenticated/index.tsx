@@ -75,10 +75,10 @@ function HomePage() {
   const tendencia = useMemo(() => {
     const buckets = new Map<string, number>();
     for (let i = DAYS - 1; i >= 0; i--) {
-      buckets.set(format(subDays(new Date(), i), "dd/MM"), 0);
+      buckets.set(format(subDays(new Date(), i), "dd/MM/yy"), 0);
     }
     filtered.forEach((t) => {
-      const key = format(startOfDay(new Date(t.fechaCreacion)), "dd/MM");
+      const key = format(startOfDay(new Date(t.fechaCreacion)), "dd/MM/yy");
       if (buckets.has(key)) buckets.set(key, (buckets.get(key) ?? 0) + 1);
     });
     return Array.from(buckets, ([fecha, count]) => ({ fecha, count }));

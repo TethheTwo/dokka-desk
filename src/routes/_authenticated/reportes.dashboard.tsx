@@ -119,11 +119,11 @@ function DashboardReportes() {
   const tendencia = useMemo(() => {
     const buckets = new Map<string, number>();
     for (let i = 0; i < days; i++) {
-      const d = format(addDays(startOfDay(from), i), "dd/MM");
+      const d = format(addDays(startOfDay(from), i), "dd/MM/yy");
       buckets.set(d, 0);
     }
     filtered.forEach((t) => {
-      const key = format(startOfDay(new Date(t.fechaCreacion)), "dd/MM");
+      const key = format(startOfDay(new Date(t.fechaCreacion)), "dd/MM/yy");
       if (buckets.has(key)) buckets.set(key, (buckets.get(key) ?? 0) + 1);
     });
     return Array.from(buckets, ([fecha, count]) => ({ fecha, count }));

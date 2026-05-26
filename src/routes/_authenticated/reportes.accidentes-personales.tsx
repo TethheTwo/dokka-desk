@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Trash2, Search, Share2 } from "lucide-react";
+import { Plus, Trash2, Search, Share2, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { AppTopBar } from "@/components/AppTopBar";
 import { PageHeader } from "@/components/PageHeader";
@@ -13,6 +13,7 @@ import { usePermissions } from "@/lib/permissions";
 import { useMasterList } from "@/lib/master-lists";
 import { exportAPPDF, exportAPXLSX, type ReportAPRow } from "@/lib/report-exports";
 import { PhoneInput } from "@/components/PhoneInput";
+import { getPaginationItems } from "@/lib/pagination";
 import { formatCode } from "@/lib/utils";
 import {
   Dialog,
@@ -307,19 +308,48 @@ function APPage() {
         </div>
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-1">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPage(p)}
-                className={`h-8 min-w-8 px-2 rounded-md text-sm transition-colors ${
-                  p === currentPage
-                    ? "bg-[var(--brand-blue)] text-white"
-                    : "text-foreground hover:bg-muted"
-                }`}
-              >
-                {p}
-              </button>
-            ))}
+            {getPaginationItems(currentPage, totalPages).map((item, i) => {
+              if (item.type === "prev") {
+                return (
+                  <button
+                    key="prev"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={item.disabled}
+                    className="h-8 min-w-8 px-2 rounded-md text-sm border border-input hover:bg-muted disabled:opacity-40 flex items-center justify-center"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                );
+              }
+              if (item.type === "next") {
+                return (
+                  <button
+                    key="next"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={item.disabled}
+                    className="h-8 min-w-8 px-2 rounded-md text-sm border border-input hover:bg-muted disabled:opacity-40 flex items-center justify-center"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                );
+              }
+              if (item.type === "ellipsis") {
+                return <span key={"e" + i} className="px-1 text-muted-foreground select-none">…</span>;
+              }
+              return (
+                <button
+                  key={item.page}
+                  onClick={() => setPage(item.page)}
+                  className={`h-8 min-w-8 px-2 rounded-md text-sm transition-colors ${
+                    item.page === currentPage
+                      ? "bg-[var(--brand-blue)] text-white"
+                      : "text-foreground hover:bg-muted"
+                  }`}
+                >
+                  {item.page}
+                </button>
+              );
+            })}
           </div>
         )}
       </main>
