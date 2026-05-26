@@ -25,10 +25,6 @@ Plataforma corporativa de gestión de tickets, asistencias y reportes. Panel adm
 ## Quick Start
 
 ```bash
-# Opción 1 — One-click
-curl -fsSL https://raw.githubusercontent.com/TethheTwo/dokka-desk/main/start.sh | bash
-
-# Opción 2 — Manual
 git clone https://github.com/TethheTwo/dokka-desk.git
 cd dokka-desk
 ./init.sh                     # genera .env con secrets aleatorios
