@@ -1,93 +1,226 @@
 # DOKKA Desk
 
-Sistema de gestión de tickets y reportes para asistencias (automotor, bici, mascotas, hogar, dental), con panel de administración, reportes AP/CG y dashboard KPI.
+Plataforma corporativa de gestión de tickets, asistencias y reportes. Panel administrativo con KPIs, reportes AP (F-775) y CG (F-805), auditoría, y control de accesos por roles.
 
-> **Stack:** Bun + TanStack Start + Supabase (GoTrue + PostgREST) + PostgreSQL + Kong + Docker
+> **Stack:** Bun + TanStack Start + PostgreSQL + Kong + GoTrue + PostgREST + Docker
+
+---
+
+## Índice
+
+- [Quick Start](#quick-start)
+- [Arquitectura](#arquitectura)
+- [Módulos del sistema](#módulos-del-sistema)
+- [Roles y permisos](#roles-y-permisos)
+- [Estados de ticket](#estados-de-ticket)
+- [Tipos de ticket](#tipos-de-ticket)
+- [API y storage](#api-y-storage)
+- [Variables de entorno](#variables-de-entorno)
+- [Comandos](#comandos)
+- [Estructura](#estructura)
+- [Solución de errores comunes](#solución-de-errores-comunes)
 
 ---
 
 ## Quick Start
 
-### Un solo comando (recomendado)
-
 ```bash
+# Opción 1 — One-click
 curl -fsSL https://raw.githubusercontent.com/TethheTwo/dokka-desk/main/start.sh | bash
-```
 
-> Solo necesitas **Docker**. El script clona, genera credenciales y arranca todo.
-
-### Paso a paso
-
-```bash
+# Opción 2 — Manual
 git clone https://github.com/TethheTwo/dokka-desk.git
 cd dokka-desk
-./init.sh
-docker compose up -d
+./init.sh                     # genera .env con secrets aleatorios
+docker compose up -d           # levanta los 5 servicios
 ```
 
-La app estará en **http://localhost:3000**. Las credenciales de admin se muestran al ejecutar `./init.sh` o con `grep ADMIN_ .env`.
+La app arranca en **http://localhost:3000**. Las credenciales de admin se muestran al ejecutar `./init.sh`.
 
 ---
 
-## Servicios
+## Arquitectura
 
-| Servicio | Tecnología | Puerto expuesto |
+```
+                        ┌──────────────────────┐
+                        │    app-web (:3000)    │
+                        │  Bun + TanStack SSR   │
+                        │  ─ assets estáticos   │
+                        │  ─ proxy /auth /rest  │
+                        │  ─ storage handler    │
+                        └──────┬───────────┬────┘
+                               │           │
+                        ┌──────▼────┐ ┌────▼─────────┐
+                        │  Kong     │ │  ./uploads/   │
+                        │  API GW   │ │  (archivos)   │
+                        │  :8000    │ └───────────────┘
+                        └───┬───┬───┘
+                       ┌────▼──┐┌─▼──────┐
+                       │ Auth  ││ REST   │
+                       │GoTrue ││PostgREST│
+                       │:9999  ││:3000   │
+                       └───┬───┘└───┬────┘
+                           │        │
+                        ┌──▼────────▼────┐
+                        │  PostgreSQL    │
+                        │  :5432         │
+                        └────────────────┘
+```
+
+Cada petición del frontend a `/auth/v1/*` o `/rest/v1/*` es proxeada por Bun hacia Kong, que enruta a GoTrue (Auth) o PostgREST (API REST). Los archivos subidos se sirven desde `/storage/v1/object/` directamente por Bun.
+
+---
+
+## Módulos del sistema
+
+### Dashboard
+KPIs de tickets en los últimos 7 días: total, dentro TMA, fuera TMA, cumplimiento %, tiempo promedio. Gráficos de tickets por tipo, cerrados por usuario (top 10), y tendencia diaria.
+
+### Tickets
+Sistema de tickets con 7 tipos y 6 estados. Cada ticket tiene historial de notas con adjuntos (imágenes, documentos). Flujo: Pendiente → En atención → [Esperando Respuesta | Cliente no responde | Actualizado] → Cerrado.
+
+- `GET /tickets/listado` — Lista con búsqueda, filtros, paginación
+- `GET /tickets/registrar` — Nuevo ticket tipo "Derivado a Conecta"
+- **Reporte individual**: Descarga PDF por ticket con datos, notas, y adjuntos embebidos
+
+### Asistencias
+5 tipos de asistencia, cada uno con su propio formulario y campos específicos:
+
+| Tipo | Rutas | Campos clave |
 |---|---|---|
-| `app` | Bun + TanStack Start | `3000` |
-| `db` | PostgreSQL 15 Alpine | `5432` |
-| `kong` | Kong 3.4 (API Gateway) | `8000`, `8443`, `8001` |
-| `auth` | Supabase GoTrue | — |
-| `rest` | PostgREST | — |
+| Automotor | `/asistencias/automotor` | placa, marca, modelo, 2 direcciones |
+| Mascotas | `/asistencias/mascotas` | tipo_asistencia desde lista maestra |
+| Bici | `/asistencias/bici` | tipo_asistencia desde lista maestra |
+| Hogar | `/asistencias/hogar` | detalle del problema, dirección |
+| Dental | `/asistencias/dental` | tipo_asistencia libre |
 
-### Arquitectura
+### Reportes AP / CG
+Dos tipos de reportes con formularios (F-775 y F-805), listado CRUD, previsualización, exportación (PDF/Excel) y uso compartido.
+
+| Tipo | Prefijo | Ruta lista | Ruta detalle | Ruta pública |
+|---|---|---|---|---|
+| Accidentes Personales | `AP-` | `/reportes/accidentes-personales` | `/reporte/ap/$id` | `/p/reporte/ap/$id` |
+| Casos Generales | `CG-` | `/reportes/casos-generales` | `/reporte/cg/$id` | `/p/reporte/cg/$id` |
+
+Los reportes pueden compartirse por:
+- **WhatsApp**: captura como imagen PNG
+- **Email**: con formato HTML + CC a `nacionalseguros@conecta.com.bo`
+- **Link público**: URL sin autenticación
+
+### Administración
+- **Usuarios**: CRUD completo, cambio de rol (admin/supervisor/operador/addiuva), reseteo de password, activar/inactivar
+- **Roles**: matriz de permisos por rol (12 permisos, configurable desde UI)
+- **Listas maestras**: editores para ejecutivos, correos, tipos de asistencia
+
+### Auditoría
+Bitácora de todas las acciones sobre tickets y reportes con filtros y exportación.
+
+---
+
+## Roles y permisos
+
+| Permiso | administrador | supervisor | operador | addiuva |
+|---|---|---|---|---|
+| Ver tickets | ✅ | ✅ | ✅ | ✅ |
+| Ver asistencias | ✅ | ✅ | ✅ | ❌ |
+| Ver reportes | ✅ | ✅ | ✅ | ❌ |
+| Ver dashboard | ✅ | ✅ | ❌ | ❌ |
+| Ver auditoría | ✅ | ✅ | ❌ | ❌ |
+| Ver administración | ✅ | ❌ | ❌ | ❌ |
+| Ver listas maestras | ✅ | ❌ | ❌ | ❌ |
+| Eliminar tickets | ✅ | ❌ | ❌ | ❌ |
+
+El rol `administrador` tiene **todos** los permisos siempre (forzado por base de datos y frontend). Los permisos `download_records`, `delete_reports`, `share_reports`, `reopen_closed_cases` pueden activarse desde la UI de Roles.
+
+---
+
+## Estados de ticket
 
 ```
-Navegador → app:3000 → proxy /auth/v1 y /rest/v1 → Kong → GoTrue / PostgREST → PostgreSQL
-                    → sirve assets estáticos + SSR
-                    → /storage/v1/object/ → archivos locales (./uploads/)
+Pendiente ──→ En atención ──→ Esperando Respuesta
+                                  │
+                    ┌─────────────┼─────────────┐
+                    ▼             ▼             ▼
+            Cliente no         Actualizado    Cerrado
+            responde
 ```
 
 ---
 
-## Comandos útiles
+## Tipos de ticket
 
-```bash
-docker compose logs -f          # Logs de todos los servicios
-docker compose logs -f app      # Logs de la app
-docker compose down             # Detener (no pierde datos)
-docker compose down -v          # Detener y borrar BD
-docker compose build app        # Reconstruir la app
-docker compose exec db psql     # Acceder a PostgreSQL
-docker compose ps               # Estado de servicios
-./backup.sh                     # Backup de BD
-```
+- Derivación Addiuva a Conecta
+- Derivado a Conecta
+- Asistencia Automotor
+- Asistencia Mascotas
+- Asistencia Bici
+- Asistencia Hogar
+- Asistencia Dental
+
+---
+
+## API y storage
+
+### Endpoints del servidor Bun
+
+| Ruta | Método | Función |
+|---|---|---|
+| `/auth/v1/*` | ANY | Proxy a Kong → GoTrue |
+| `/rest/v1/*` | ANY | Proxy a Kong → PostgREST |
+| `/storage/v1/object/*` | GET/POST/DELETE | Subida/descarga/borrado de archivos |
+| `/storage/v1/object/sign/*` | GET/POST | Signed URLs (60s) |
+| `/api/export/excel` | POST | Generación de Excel vía Python/openpyxl |
+| `/assets/*` | GET | Assets estáticos compilados |
+| `/favicon.png` | GET | Favicon |
+
+### Buckets de storage
+
+| Bucket | Tipo | Acceso |
+|---|---|---|
+| `ticket-attachments` | Privado | Lectura/escritura autenticado |
+| `avatars` | Público | Lectura pública, escritura autenticado |
 
 ---
 
 ## Variables de entorno
 
-| Variable | Descripción | Default |
-|---|---|---|
-| `POSTGRES_PASSWORD` | Contraseña de PostgreSQL | Requerida |
-| `JWT_SECRET` | Secreto JWT | Requerido |
-| `SITE_URL` | URL pública del sitio | `http://localhost:3000` |
-| `SUPABASE_PUBLISHABLE_KEY` | Anon key | Requerida |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key | Requerida |
-| `ADMIN_EMAIL` | Email del admin inicial | `admin@dokkadesk.com` |
-| `ADMIN_PASSWORD` | Contraseña del admin inicial | Requerida |
-| `VITE_SUPABASE_URL` | URL de Supabase (frontend) | `http://localhost:3000` |
-| `UPLOAD_DIR` | Directorio de uploads | `/app/uploads` |
+| Variable | Obligatoria | Default | Descripción |
+|---|---|---|---|
+| `POSTGRES_PASSWORD` | ✅ | — | Contraseña de PostgreSQL |
+| `JWT_SECRET` | ✅ | — | Secreto para firmar JWTs |
+| `SITE_URL` | ❌ | `http://localhost:3000` | URL pública del sitio |
+| `SUPABASE_PUBLISHABLE_KEY` | ✅ | — | Anon key (JWT) |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | — | Service role key (JWT) |
+| `ADMIN_EMAIL` | ❌ | `admin@dokkadesk.com` | Email del admin inicial |
+| `ADMIN_PASSWORD` | ❌ | — | Password del admin inicial |
+| `UPLOAD_DIR` | ❌ | `/app/uploads` | Directorio de archivos subidos |
+
+> `./init.sh` genera todas las claves automáticamente con `openssl` y `python3`.
 
 ---
 
-## Seguridad
+## Comandos
 
-- `./init.sh` genera secrets únicos (JWT, POSTGRES_PASSWORD, claves admin)
-- `.env` en `.gitignore` — nunca se sube al repo
-- No expongas los puertos `5432`, `8001` al exterior
-- Usa un reverse proxy con SSL para producción
+```bash
+# Gestión de servicios
+docker compose up -d            # Iniciar todo
+docker compose down             # Detener (conserva datos)
+docker compose down -v          # Detener y borrar BD
+docker compose ps               # Estado
+docker compose logs -f          # Logs en vivo
+docker compose logs -f app      # Logs solo de la app
 
-> Para un análisis completo de producción, despliegue, conflictos de puertos y solución de errores, consulta la **[Guía de producción →](/PRODUCTION-GUIDE.md)**
+# Build y actualización
+docker compose build app        # Reconstruir imagen de la app
+docker compose up -d app        # Reiniciar app con nueva imagen
+
+# Base de datos
+docker compose exec db psql -U postgres -d postgres   # Consola SQL
+./backup.sh                     # Backup de la BD
+
+# Utilidades
+grep ADMIN_ .env                # Ver credenciales de admin
+```
 
 ---
 
@@ -95,26 +228,43 @@ docker compose ps               # Estado de servicios
 
 ```
 dokka-desk/
-├── docker/kong.yml            # Configuración de Kong
-├── supabase/migrations/       # Migraciones SQL
+├── docker/
+│   └── kong.yml                  # Configuración de Kong (CORS, rutas)
+├── supabase/
+│   └── migrations/               # 11 migraciones SQL (tablas, roles, RLS, triggers)
 ├── src/
-│   ├── components/            # Componentes React
-│   ├── routes/                # Páginas y layouts
-│   ├── lib/                   # Lógica de negocio
-│   └── integrations/          # Clientes Supabase
-├── docker-compose.yml         # Stack Docker (5 servicios)
-├── Dockerfile                 # Build multi-stage
-├── entrypoint.sh              # Entrypoint del contenedor app
-├── init.sh                    # Generador de .env
-├── server-entry.js            # Servidor Bun
-├── scripts/generate_excel.py  # Generador de Excel
-├── start.sh                   # Instalador one-click
-├── backup.sh                  # Backup de PostgreSQL
-└── PRODUCTION-GUIDE.md        # Guía de producción
+│   ├── components/               # 13 componentes principales + 57 UI base (shadcn)
+│   ├── routes/                   # 21 rutas (TanStack Router)
+│   ├── lib/                      # 13 módulos (auth, permisos, tickets, reportes, etc.)
+│   ├── integrations/supabase/    # Cliente Supabase (cliente y servidor)
+│   └── assets/                   # Logos (login, navbar)
+├── scripts/
+│   └── generate_excel.py         # Generación de Excel con openpyxl
+├── docker-compose.yml            # 5 servicios
+├── Dockerfile                    # Multi-stage build (bun install → vite build → release)
+├── server-entry.js               # Servidor HTTP (Bun) con proxy y storage
+├── entrypoint.sh                 # Entrypoint: espera GoTrue, crea admin, inicia server
+├── init.sh                       # Genera .env con secrets
+├── start.sh                      # Instalador one-click
+└── backup.sh                     # pg_dump con rotación de 7 días
 ```
 
 ---
 
-## Licencia
+## Solución de errores comunes
 
-Uso interno / privado. No redistribuir sin autorización.
+### "Failed to fetch" en login o dashboard
+El frontend usa `window.location.origin` para las llamadas a la API. Si accedés por un dominio (Cloudflare, nginx, etc.), debería funcionar automáticamente. Verificá que `SITE_URL` en `.env` coincida con la URL de acceso.
+
+### Las imágenes no aparecen en el PDF descargado
+El PDF usa `window.location.origin` para fetch de imágenes. Si descargás desde un dominio, las imágenes se sirven desde el mismo dominio a través del storage handler de Bun.
+
+### Port already allocated
+Cambiar el mapeo en `docker-compose.yml`: `"3001:3000"` para usar un puerto distinto.
+
+### GoTrue no arranca
+Esperar a que PostgreSQL esté healthy. Puede tomar hasta 30 segundos en el primer inicio.
+
+---
+
+> Para un análisis completo de producción, conflictos de puertos, despliegue en Proxmox, y configuración de Cloudflare Tunnel, consulta la **[Guía de producción →](/PRODUCTION-GUIDE.md)**
