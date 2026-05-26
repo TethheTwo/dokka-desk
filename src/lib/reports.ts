@@ -121,13 +121,34 @@ export async function downloadTicketPDF(ticket: Ticket) {
 
   let nextY = (doc as any).lastAutoTable.finalY + 24;
 
+  // Descripción del caso (extraída de la nota con prefijo __DESCRIPCION__:)
+  const descNote = ticket.notes.find((n) => n.nota?.startsWith("__DESCRIPCION__:"));
+  const descripcion = descNote ? descNote.nota.replace(/^__DESCRIPCION__:\s*/, "").trim() : "";
+  const displayNotes = ticket.notes.filter((n) => !n.nota?.startsWith("__DESCRIPCION__:"));
+
+  if (descripcion) {
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(40, 40, 40);
+    doc.text("Descripción del caso", 40, nextY);
+    doc.setDrawColor(47, 127, 214);
+    doc.setFillColor(240, 248, 255);
+    doc.roundedRect(40, nextY + 8, pageW - 80, 36, 3, 3, "FD");
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(40, 40, 40);
+    const lines = doc.splitTextToSize(descripcion, pageW - 100);
+    doc.text(lines, 50, nextY + 20);
+    nextY += 52;
+  }
+
   // Notas
   doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(40, 40, 40);
-  doc.text(`Historial de notas (${ticket.notes.length})`, 40, nextY);
+  doc.text(`Historial de notas (${displayNotes.length})`, 40, nextY);
 
-  if (ticket.notes.length === 0) {
+  if (displayNotes.length === 0) {
     doc.setFontSize(10);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(120, 120, 120);
@@ -137,7 +158,7 @@ export async function downloadTicketPDF(ticket: Ticket) {
     autoTable(doc, {
       startY: nextY + 6,
       head: [["Fecha", "Estado", "Usuario", "Nota"]],
-      body: ticket.notes.map((n) => [
+      body: displayNotes.map((n) => [
         format(new Date(n.fecha), "dd/MM/yyyy HH:mm"),
         n.estado,
         n.usuario,
