@@ -3,7 +3,9 @@ import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import type { Ticket, TicketAttachment } from "@/lib/tickets-store";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "http://localhost:3000";
+const SUPABASE_URL = typeof window !== "undefined"
+  ? window.location.origin
+  : (import.meta.env.VITE_SUPABASE_URL || "http://localhost:3000");
 
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
