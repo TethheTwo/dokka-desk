@@ -235,5 +235,6 @@ Uso interno / privado. No redistribuir sin autorización.
 
 ---
 
-> Para un análisis completo de producción, despliegue en CT, conflictos de puertos, y
-> configuración avanzada, consulta la **[Guía de producción →](/PRODUCTION-GUIDE.md)**
+> Para un análisis completo de producción, despliegue en CT, conflictos de puertos,
+> solución de errores comunes (incluyendo "Failed to fetch"), y configuración avanzada,
+> consulta la **[Guía de producción →](/PRODUCTION-GUIDE.md)**

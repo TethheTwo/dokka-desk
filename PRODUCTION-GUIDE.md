@@ -443,6 +443,51 @@ docker compose exec kong cat /opt/kong/kong.yml
 docker compose logs kong
 ```
 
+### Error: `Failed to fetch` en el frontend (login/KPI no cargan)
+
+**Causa**: El cliente Supabase (`@supabase/supabase-js`) está configurado
+con una URL fija (`VITE_SUPABASE_URL`) que no coincide con la URL desde
+donde el usuario accede a la app.
+
+Cuando `VITE_SUPABASE_URL` se queda como `http://localhost:8000` o
+`http://localhost:3000`, el navegador intenta conectar a esos puertos
+en la máquina del usuario, no en el servidor.
+
+**Solución aplicada**:
+
+Se modificó `src/integrations/supabase/client.ts` para que el cliente
+Supabase use `window.location.origin` automáticamente en el navegador:
+
+```ts
+const SUPABASE_URL = typeof window !== "undefined"
+  ? window.location.origin                        // ← navegador: usa la URL actual
+  : (import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL); // ← SSR
+```
+
+Esto hace que:
+- El navegador haga peticiones al **mismo origen** (ej. `http://10.10.0.103:3000/auth/v1/...`)
+- El servidor Bun proxyee esas rutas a Kong internamente
+- No hay problemas de CORS ni de URL incorrecta
+
+**¿Por qué funciona?** El `server-entry.js` de Bun ya tiene un proxy
+para `/auth/v1` y `/rest/v1` que redirige a Kong en la red interna de
+Docker. Solo hacía falta que el cliente Supabase apuntara al mismo
+servidor Bun en lugar de a `localhost:8000`.
+
+Adicionalmente:
+- Se actualizó `docker-compose.yml` para que `VITE_SUPABASE_URL` use `SITE_URL`
+- Se actualizó `docker/kong.yml` para permitir CORS desde cualquier origen
+- Se actualizó el `.env` con `SITE_URL=http://100.66.250.7:3000` (Tailscale IP)
+
+**Si cambias la URL de acceso** (ej. por un dominio personalizado):
+```bash
+# En CT 103
+cd /root/dokka-desk
+sed -i "s|SITE_URL=.*|SITE_URL=https://tudominio.com|" .env
+docker compose build app   # rebuild para que VITE_ env vars se actualicen
+docker compose up -d
+```
+
 ### Error: `pg_isready` no responde
 
 **Causa**: PostgreSQL no se ha inicializado completamente.
